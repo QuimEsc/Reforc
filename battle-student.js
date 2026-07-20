@@ -26,7 +26,7 @@
       "battleCountdown", "battleCountdownNumber", "battleQuestionScreen", "battleQuestionLevel", "battleQuestionProgress", "battleQuestion",
       "battleAnswerForm", "battleOptionGrid", "battleTextAnswerWrap", "battleAnswerInput", "battleChestScreen", "battleEffectScreen",
       "battleEffectIcon", "battleEffectTitle", "battleEffectText", "battlePenalty", "battlePenaltyTime", "battlePenaltyHint",
-      "battleResults", "battlePodium", "battleCapturePanel", "battleCaptureTitle", "battleCaptureCards", "battleLeaveButton",
+      "battleResults", "battleOwnFinalPosition", "battlePodium", "battleCapturePanel", "battleCaptureTitle", "battleCaptureCards", "battleLeaveButton",
       "battleTargetDialog", "battleTargetTitle", "battleTargetList", "battleCancelTarget", "battleDuelDialog", "battleDuelTitle",
       "battleDuelQuestion", "battleDuelForm", "battleDuelAnswer", "battleDuelTimer"
     ].forEach((id) => { dom[id] = document.getElementById(id); });
@@ -381,13 +381,19 @@
   function renderResults() {
     showOnly("results");
     const players = playersSorted();
+    const ownIndex = players.findIndex((player) => player.studentId === state.student.studentId);
+    const ownPlayer = ownIndex >= 0 ? players[ownIndex] : state.player;
+    dom.battleOwnFinalPosition.innerHTML = ownIndex >= 0
+      ? `<span>La teua posició final</span><strong>${ownIndex + 1}<small> de ${players.length}</small></strong><p>${Math.round(Number(ownPlayer && ownPlayer.gold || 0))} ◆ · ${Number(ownPlayer && ownPlayer.correct || 0)} encerts · ${Number(ownPlayer && ownPlayer.incorrect || 0)} errors</p>`
+      : "";
     dom.battlePodium.innerHTML = "";
     const order = [players[1], players[0], players[2]].filter(Boolean);
     order.forEach((player) => {
       const position = players.indexOf(player) + 1;
       const item = document.createElement("article");
       item.className = `podium-place ${position === 1 ? "first" : position === 2 ? "second" : "third"}`;
-      item.innerHTML = `${avatarSpan(player.avatar)}<b>${position}r</b><strong>${window.GameMath.escapeHtml(player.name || "Jugador")}</strong><small>${Math.round(Number(player.gold || 0))} ◆</small>`;
+      const ordinal = position === 1 ? "1r" : position === 2 ? "2n" : position === 3 ? "3r" : position === 4 ? "4t" : `${position}é`;
+      item.innerHTML = `${avatarSpan(player.avatar)}<b>${ordinal}</b><strong>${window.GameMath.escapeHtml(player.name || "Jugador")}</strong><small>${Math.round(Number(player.gold || 0))} ◆</small>`;
       dom.battlePodium.appendChild(item);
     });
     renderCapture();

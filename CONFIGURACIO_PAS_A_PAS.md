@@ -108,6 +108,22 @@ No tornes a executar `configurarProjecte()` ni esborres cap pestanya:
 
 La funció crea la pestanya `Diagnostic`, afegeix sempre al final les capçaleres noves que falten i usa `CorreccionsIAPerNivell = 1` per reclassificar **totes les preguntes compatibles que ja hi haja en `Preguntes`**. Respecta la teoria i les construccions geomètriques, no esborra respostes, historial, columnes addicionals, anotacions ni càlculs. No cal crear, moure ni omplir cap columna manualment. Després crea una nova versió de la implementació web.
 
+### Reiniciar el projecte al final del curs
+
+No tornes a executar `configurarProjecte()` i no esborres pestanyes manualment:
+
+1. Si vols conservar una còpia històrica, fes primer **Fitxer → Fes una còpia** del Google Sheet.
+2. En Apps Script, tria `reiniciarDadesFinalDeCurs`.
+3. Prem **Executar**.
+4. Llig els dos avisos i confirma'ls.
+5. Espera el missatge **Projecte preparat per al curs nou**.
+
+La funció elimina alumnes, respostes, progrés, notes, diagnòstics, revisions, insígnies concedides, inventaris d'avatars, assignacions, sessions i historial de batalles. També neteja `live`, comentaris, notificacions, objectiu de classe i batalles del grup configurat en `/gamificacio` de Firebase. No modifica els nodes `live` i `comments` d'`ExercicisMates`.
+
+Es conserven `Contrasenya`, `Configuracio`, `Sectors`, `Missions`, `Preguntes`, `MetodesIA`, `Insignies`, `HistorialPreguntes` i `PreguntesBatalla`. `TrimestreActual` torna a `1`, totes les missions queden bloquejades excepte la primera i es creen novament l'alumne `ALU-001` i l'assignació inicial `A-INICIAL`.
+
+Les capçaleres i les columnes personalitzades es mantenen. En canvi, el contingut, les fórmules i les notes de les files de dades dels fulls reiniciats s'eliminen perquè poden contindre informació de l'alumnat. L'operació no es pot desfer des del programa.
+
 ## Part 4 — Desplegar Apps Script
 
 1. Prem **Implementar → Nova implementació**.

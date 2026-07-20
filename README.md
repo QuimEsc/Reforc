@@ -36,8 +36,9 @@ Aplicació web autònoma per a reforç de matemàtiques de 1r d'ESO. La carpeta 
 - Mode batalla de classe, amb les 15 preguntes de la missió del dia, set minuts, cofres i classificació en directe.
 - Batalla final de sector disponible en la missió 5: deu minuts i 20 preguntes de repàs, exactament quatre de cadascuna de les cinc missions.
 - Les preguntes, solucions, opcions i pistes es carreguen totes abans del compte arrere. Durant la partida no es consulta Apps Script ni OpenAI per corregir cada resposta.
-- La classificació en directe només apareix en seguiment docent. Durant els últims 20 segons també s'oculta al professor amb una animació de cambra segellada. La pantalla de l'alumnat queda dedicada a la pregunta, l'or propi i els cofres.
-- Per reduir trànsit de Firebase, cada alumne escolta només la configuració general, les preguntes, els seus propis punts i els duels. Només el seguiment docent escolta la taula completa de jugadors.
+- El seguiment docent conserva l'alumnat en ordre alfabètic i actualitza només la posició, l'or, els encerts, els errors i els intents. El botó `Projectar classificació` obri una vista gran que reordena els noms amb animació; només esta vista pública queda segellada durant els últims 20 segons.
+- En acabar, cada alumne veu la seua posició final. Els tres primers —o els dos primers si només hi ha quatre o cinc participants— trien, estrictament per ordre de classificació, un avatar disponible dels últims participants durant set dies.
+- Per reduir trànsit de Firebase, cada alumne escolta només la configuració general, les preguntes, els seus propis punts i els duels. La taula completa de jugadors només l'escolten el seguiment docent i, quan l'obris, una única pantalla de projector.
 - Historial docent d'insígnies obtingudes per alumne durant els últims 7 i 31 dies.
 
 ## Prova sense configurar res
@@ -47,6 +48,7 @@ Obri `demo.html` per entrar a la pantalla de demostració o, si ho prefereixes, 
 - `index.html?demo=1`
 - `seguiment.html?demo=1`
 - `index.html?demo=1&battle=1` per entrar directament en una batalla simulada
+- `batalla-classificacio.html?demo=1` per provar la classificació projectada
 - `demo-geometria.html` per provar directament la quadrícula de construcció
 
 El mode demostració usa dades locals i no escriu en Sheets, Firebase ni OpenAI.
@@ -65,6 +67,8 @@ El mode demostració usa dades locals i no escriu en Sheets, Firebase ni OpenAI.
 | `seguiment.js` | Monitor, assignacions i aprovació d'IA |
 | `battle-student.js` | Partida de l'alumnat, cofres, penalitzacions, duels i premis |
 | `battle-teacher.js` | Preparació, selecció de participants, control i historial docent |
+| `batalla-classificacio.html` | Classificació animada per al projector i cambra final de 20 segons |
+| `battle-projector.js` | Sincronització lleugera i moviment en directe de la vista projectada |
 | `battle-service.js` | Estat de la batalla en Firebase i correcció local de respostes |
 | `firebase-service.js` | Escriptures incrementals i comentaris |
 | `math-render.js` | MathJax i sanejament d'HTML |
@@ -82,6 +86,8 @@ El mode demostració usa dades locals i no escriu en Sheets, Firebase ni OpenAI.
 Segueix [CONFIGURACIO_PAS_A_PAS.md](CONFIGURACIO_PAS_A_PAS.md). La funció `configurarProjecte()` crea automàticament totes les pestanyes, capçaleres, validacions, el banc complet de 1.125 exercicis i les 375 preguntes ràpides de les batalles finals.
 
 La planificació completa de temàtiques i missions està resumida en [SECTORS_DEL_CURS.md](SECTORS_DEL_CURS.md).
+
+Al final del curs, la funció manual `reiniciarDadesFinalDeCurs()` elimina totes les dades de l'alumnat i torna el projecte a l'estat inicial amb `ALU-001`. Conserva íntegrament el temari, les preguntes, les solucions, les preguntes de batalla, els sectors, les missions i la configuració. La funció també neteja únicament el grup actual de `/gamificacio` en Firebase i no toca les dades de l'altre projecte `ExercicisMates`.
 
 ## Model de dades
 

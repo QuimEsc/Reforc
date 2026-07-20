@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=5">
-  <link rel="stylesheet" href="seguiment.css?v=9">
+  <link rel="stylesheet" href="seguiment.css?v=10">
   <script>
     window.MathJax = {
       tex: { inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']], processEscapes: true },
@@ -25,9 +25,9 @@
   <script defer src="data-service.js?v=4"></script>
   <script defer src="math-render.js?v=3"></script>
   <script defer src="firebase-service.js?v=7"></script>
-  <script defer src="battle-service.js?v=1"></script>
+  <script defer src="battle-service.js?v=2"></script>
   <script defer src="seguiment.js?v=10"></script>
-  <script defer src="battle-teacher.js?v=1"></script>
+  <script defer src="battle-teacher.js?v=2"></script>
 </head>
 <body class="monitor-body theme-space">
   <section id="teacherGate" class="teacher-gate" aria-labelledby="teacherGateTitle">
@@ -107,6 +107,7 @@
         <strong id="teacherBattleTimer">07:00</strong>
         <div id="teacherBattleRanking" class="teacher-battle-ranking"></div>
         <div class="teacher-battle-actions">
+          <button id="openBattleProjectorButton" class="secondary-button compact projector-button" type="button">Projectar classificació</button>
           <button id="finishBattleButton" class="primary-button compact" type="button">Tancar i guardar ara</button>
           <button id="clearBattleButton" class="danger-button compact" type="button">Cancel·lar partida</button>
         </div>

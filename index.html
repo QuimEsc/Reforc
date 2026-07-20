@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=7">
-  <link rel="stylesheet" href="battle.css?v=1">
+  <link rel="stylesheet" href="battle.css?v=2">
   <script>
     window.MathJax = {
       tex: {
@@ -32,9 +32,9 @@
   <script defer src="math-render.js?v=3"></script>
   <script defer src="geometry-editor.js?v=1"></script>
   <script defer src="firebase-service.js?v=7"></script>
-  <script defer src="battle-service.js?v=1"></script>
+  <script defer src="battle-service.js?v=2"></script>
   <script defer src="app.js?v=14"></script>
-  <script defer src="battle-student.js?v=1"></script>
+  <script defer src="battle-student.js?v=2"></script>
 </head>
 <body class="theme-space">
   <div class="world" aria-hidden="true">
@@ -328,6 +328,7 @@
         <section id="battleResults" class="battle-results hidden">
           <p class="battle-kicker">FINAL DE LA BATALLA</p>
           <h2>El tresor ha decidit</h2>
+          <div id="battleOwnFinalPosition" class="battle-own-final-position"></div>
           <div id="battlePodium" class="battle-podium"></div>
           <div id="battleCapturePanel" class="battle-capture-panel hidden">
             <h3 id="battleCaptureTitle">Tria un avatar capturat</h3>

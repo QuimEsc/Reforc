@@ -15,7 +15,7 @@
   function cacheDom() {
     [
       "battleMissionSelect", "prepareDailyBattleButton", "prepareFinalBattleButton", "battleFinalAvailability", "battleHistoryButton",
-      "teacherBattleLive", "teacherBattlePhase", "teacherBattleTitle", "teacherBattleTimer", "teacherBattleRanking", "finishBattleButton", "clearBattleButton",
+      "teacherBattleLive", "teacherBattlePhase", "teacherBattleTitle", "teacherBattleTimer", "teacherBattleRanking", "openBattleProjectorButton", "finishBattleButton", "clearBattleButton",
       "battleSetupDialog", "battleSetupTitle", "battleSetupDescription", "battleParticipantList", "battleSelectedCount", "selectAllActiveButton", "launchBattleButton",
       "battleHistoryDialog", "battleHistoryBody"
     ].forEach((id) => { dom[id] = document.getElementById(id); });
@@ -193,6 +193,14 @@
     );
   }
 
+  function teacherPlayers() {
+    const ranked = sortedPlayers(true);
+    const positions = new Map(ranked.map((player, index) => [player.studentId, index + 1]));
+    return ranked.slice().sort((a, b) =>
+      String(a.name || "").localeCompare(String(b.name || ""), "ca", { sensitivity: "base" })
+    ).map((player) => ({ ...player, position: positions.get(player.studentId) || "—" }));
+  }
+
   function tick() {
     if (!state.battle || !state.battle.meta) return;
     const now = Date.now();
@@ -211,24 +219,24 @@
   function renderLive() {
     if (!state.battle || !state.battle.meta) return;
     const remaining = Math.max(0, Number(state.battle.meta.endAt || 0) - Date.now());
-    const blindSeconds = Number(state.battle.meta.blindSeconds || 20);
-    const finalSeconds = remaining > 0 && remaining <= blindSeconds * 1000 && state.battle.phase !== "RESULTS";
     dom.teacherBattleTitle.textContent = state.battle.meta.title || "Batalla";
-    dom.teacherBattlePhase.textContent = state.battle.phase === "RESULTS" ? "FINALITZADA" : remaining <= 0 ? "GUARDANT" : Date.now() < Number(state.battle.meta.startAt || 0) ? "COMPTE ARRERE" : finalSeconds ? "CAMBRA TANCADA" : "EN DIRECTE";
+    dom.teacherBattlePhase.textContent = state.battle.phase === "RESULTS" ? "FINALITZADA" : remaining <= 0 ? "GUARDANT" : Date.now() < Number(state.battle.meta.startAt || 0) ? "COMPTE ARRERE" : "EN DIRECTE";
     dom.finishBattleButton.disabled = state.finalizing || state.battle.phase === "RESULTS";
-    const wasBlind = dom.teacherBattleRanking.classList.contains("blind");
-    dom.teacherBattleRanking.classList.toggle("blind", finalSeconds);
-    if (finalSeconds) {
-      if (!wasBlind) dom.teacherBattleRanking.innerHTML = `<div class="teacher-battle-seal"><span>🔒</span><strong>La cambra final s'ha tancat</strong><small>Classificació oculta durant els últims ${blindSeconds} segons</small></div>`;
-      return;
-    }
+    dom.teacherBattleRanking.classList.remove("blind");
     dom.teacherBattleRanking.innerHTML = "";
-    sortedPlayers(true).forEach((player, index) => {
+    teacherPlayers().forEach((player) => {
       const row = document.createElement("div");
       row.className = `teacher-rank-row${player.waiting ? " waiting" : ""}`;
-      row.innerHTML = `<b>${index + 1}</b><strong>${window.GameMath.escapeHtml(player.name || "Jugador")}</strong><span>${Math.round(Number(player.gold || 0))} ◆</span><small>${player.waiting ? "Esperant connexió…" : `${Number(player.correct || 0)} encerts · ${Number(player.incorrect || 0)} errors`}</small>`;
+      row.innerHTML = `<b title="Posició actual">${player.position}</b><strong>${window.GameMath.escapeHtml(player.name || "Jugador")}</strong><span>${Math.round(Number(player.gold || 0))} ◆</span><small>${player.waiting ? "Esperant connexió…" : `${Number(player.correct || 0)} encerts · ${Number(player.incorrect || 0)} errors · ${Number(player.attempts || 0)} intents`}</small>`;
       dom.teacherBattleRanking.appendChild(row);
     });
+  }
+
+  function openProjector() {
+    const demo = window.GameData.isDemo() ? "?demo=1" : "";
+    const projector = window.open(`batalla-classificacio.html${demo}`, "gamificacio-battle-projector");
+    if (!projector) state.bridge.toast("El navegador ha bloquejat la finestra del projector.", "warning", 7000);
+    else projector.focus();
   }
 
   async function finalize(early) {
@@ -256,7 +264,7 @@
         capture: {
           winners: capture.winners || [],
           pool: capture.pool || [],
-          currentWinnerId: capture.winners && capture.winners.length && capture.pool && capture.pool.length ? capture.winners[0] : "",
+          currentWinnerId: capture.currentWinnerId || (capture.winners && capture.winners.length && capture.pool && capture.pool.length ? capture.winners[0] : ""),
           claims: {}
         }
       });
@@ -299,6 +307,7 @@
     dom.prepareFinalBattleButton.addEventListener("click", () => prepare("FINAL_SECTOR"));
     dom.selectAllActiveButton.addEventListener("click", markActive);
     dom.launchBattleButton.addEventListener("click", launch);
+    dom.openBattleProjectorButton.addEventListener("click", openProjector);
     dom.finishBattleButton.addEventListener("click", () => finalize(true));
     dom.clearBattleButton.addEventListener("click", clearBattle);
     dom.battleHistoryButton.addEventListener("click", openHistory);
