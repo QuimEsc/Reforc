@@ -304,6 +304,11 @@ select option { color: #111a45; background: white; }
 .math-content mjx-container { overflow-x: auto; overflow-y: hidden; max-width: 100%; padding: 4px 0; }
 .answer-zone { margin-top: 27px; }
 .answer-zone > label { display: block; margin-bottom: 9px; font-weight: 900; }
+.procedure-notice { display: flex; align-items: center; gap: 11px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid rgba(255, 203, 102, .42); border-radius: 15px; background: rgba(255, 203, 102, .10); }
+.procedure-notice > span { font-size: 1.35rem; }
+.procedure-notice strong, .procedure-notice small { display: block; }
+.procedure-notice strong { color: #ffe5a2; font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; }
+.procedure-notice small { margin-top: 2px; color: #d7def5; line-height: 1.35; }
 textarea { resize: vertical; min-height: 132px; padding: 16px; line-height: 1.5; transition: border-color .2s ease, box-shadow .2s ease; }
 textarea:focus { border-color: var(--primary-2); box-shadow: 0 0 0 4px rgba(78,215,255,.09); }
 .math-preview-wrap { margin-top: 12px; padding: 13px 15px; border: 1px dashed var(--stroke-strong); border-radius: var(--radius-md); background: rgba(0,0,0,.13); }

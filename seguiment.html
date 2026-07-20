@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=5">
-  <link rel="stylesheet" href="seguiment.css?v=8">
+  <link rel="stylesheet" href="seguiment.css?v=9">
   <script>
     window.MathJax = {
       tex: { inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']], processEscapes: true },
@@ -22,11 +22,11 @@
   <script defer src="config.js?v=3"></script>
   <script defer src="firebase-config.js?v=2"></script>
   <script defer src="demo-data.js?v=4"></script>
-  <script defer src="data-service.js?v=3"></script>
+  <script defer src="data-service.js?v=4"></script>
   <script defer src="math-render.js?v=3"></script>
   <script defer src="firebase-service.js?v=7"></script>
   <script defer src="battle-service.js?v=1"></script>
-  <script defer src="seguiment.js?v=9"></script>
+  <script defer src="seguiment.js?v=10"></script>
   <script defer src="battle-teacher.js?v=1"></script>
 </head>
 <body class="monitor-body theme-space">
@@ -121,6 +121,15 @@
     <section id="pendingReviewCard" class="pending-proposal-card game-card hidden">
       <div><strong id="pendingReviewCount">0</strong><span>procediments pendents de revisió docent</span></div>
       <button id="reviewProcedureButton" class="secondary-button" type="button">Revisar procediment</button>
+    </section>
+
+    <section id="diagnosticCard" class="diagnostic-entry-card game-card">
+      <div>
+        <p class="eyebrow">DIAGNÒSTIC D’APRENENTATGE</p>
+        <h2><strong id="diagnosticCount">0</strong> blocs analitzats</h2>
+        <p id="diagnosticAverage">Encara no hi ha activitats diagnòstiques.</p>
+      </div>
+      <button id="openDiagnosticButton" class="secondary-button" type="button">Obrir diagnòstic</button>
     </section>
 
     <section class="monitor-toolbar game-card">
@@ -219,6 +228,29 @@
     <h2 id="commentDialogTitle">Enviar comentari</h2>
     <textarea id="commentText" rows="4" maxlength="2000" placeholder="Escriu un missatge breu i concret…"></textarea>
     <button id="sendCommentButton" class="primary-button" type="button">Enviar ara</button>
+  </dialog>
+
+  <dialog id="diagnosticDialog" class="monitor-dialog diagnostic-dialog">
+    <form method="dialog" class="dialog-close-row"><button class="icon-button" aria-label="Tancar">✕</button></form>
+    <div class="diagnostic-heading">
+      <div><p class="eyebrow">DIAGNÒSTIC IA + CORRECCIÓ LOCAL</p><h2>Com està aprenent la classe?</h2></div>
+      <label for="diagnosticRange">Període
+        <select id="diagnosticRange"><option value="7">7 dies</option><option value="31" selected>31 dies</option><option value="90">90 dies</option></select>
+      </label>
+    </div>
+    <div class="diagnostic-stats">
+      <article><span>Blocs</span><strong id="diagnosticTotalBlocks">0</strong></article>
+      <article><span>Mitjana</span><strong id="diagnosticMeanScore">—</strong></article>
+      <article><span>Reforços pendents</span><strong id="diagnosticReinforcementCount">0</strong></article>
+    </div>
+    <section class="diagnostic-section">
+      <h3>Dificultats de la classe</h3>
+      <div class="diagnostic-table-wrap"><table class="diagnostic-table"><thead><tr><th>Dificultat</th><th>Alumnes</th><th>Vegades</th><th>Confiança</th></tr></thead><tbody id="diagnosticClassBody"></tbody></table></div>
+    </section>
+    <section class="diagnostic-section">
+      <div class="diagnostic-student-heading"><h3>Informe individual</h3><select id="diagnosticStudentSelect" aria-label="Selecciona un alumne"><option value="">Tria un alumne</option></select></div>
+      <div id="diagnosticStudentDetail" class="diagnostic-student-detail"><p>Selecciona un alumne per veure la seua evolució.</p></div>
+    </section>
   </dialog>
 
   <dialog id="battleSetupDialog" class="monitor-dialog battle-setup-dialog">

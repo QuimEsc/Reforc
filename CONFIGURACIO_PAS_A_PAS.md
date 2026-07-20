@@ -52,6 +52,7 @@ La funció crea estes pestanyes:
 - `DebugIA`
 - `PlansNivell`
 - `RevisionsDocents`
+- `Diagnostic`
 - `HistorialPreguntes`
 - `HistoriaRespAlumnes`
 - `PreguntesBatalla`
@@ -90,7 +91,7 @@ Pots desactivar temporalment la IA canviant:
 var OPENAI_ACTIU = false;
 ```
 
-Els exercicis `NUMERICA` i `EXACTA` es corregeixen directament. Els `PROCEDIMENT_LOCAL` exigeixen passos i validen el resultat, les igualtats numèriques i que el procediment no siga una repetició trivial, però sense cridar OpenAI. Els `PROCEDIMENT` reserven la IA per al cinqué exercici del bloc, quan cal interpretar transformacions alternatives. Si la IA està desactivada, falla o supera una quota, la resposta **no es perd ni bloqueja l'alumne**: queda com `REVISAR_DOCENT` en la cua de seguiment.
+Els `PROCEDIMENT_LOCAL` exigeixen passos i validen sense OpenAI la resposta final, les igualtats numèriques i que el procediment no siga una repetició trivial. També reconeixen fraccions equivalents, coma decimal, factors en un altre ordre, llistes de divisors o múltiples reordenades i expressions algebraiques equivalents. En preguntes textuals o de classificació demanen una justificació breu i una última línia `Resposta: ...`, no una cadena artificial d'igualtats. Els `PROCEDIMENT` reserven la IA per a l'últim exercici textual del bloc. Si la IA està desactivada, falla o supera una quota, la resposta **no es perd ni bloqueja l'alumne**: queda com `REVISAR_DOCENT` en la cua de seguiment.
 
 En una pregunta `PROCEDIMENT_LOCAL` o `PROCEDIMENT`, el navegador avisa abans d'enviar si només s'ha escrit el resultat. Si encara arriba una resposta sense passos —per exemple, per un enviament forçat en perdre el focus— el primer intent queda `EN_CURS`. Un procediment incomplet no rep energia, ratxa, insígnies ni aporta a l'objectiu cooperatiu. Només un procediment validat pot concedir `PAS_A_PAS`.
 
@@ -102,10 +103,10 @@ No tornes a executar `configurarProjecte()` ni esborres cap pestanya:
 
 1. Substitueix en Apps Script els continguts de `Code.gs` i `Contingut.gs` per les versions noves de la carpeta `Gamificacio/apps-script`.
 2. Guarda el projecte.
-3. Tria la funció `optimitzarCorreccionsProjecte` i executa-la **una sola vegada**.
+3. Tria la funció `actualitzarProjecteDiagnosi` i executa-la **una sola vegada**.
 4. Quan aparega el missatge de finalització, crea una nova versió de la implementació web.
 
-La funció usa la configuració `CorreccionsIAPerNivell = 1` i transforma les antigues preguntes ràpides curriculars en `PROCEDIMENT_LOCAL`. Només toca preguntes creades pel programa (`CURR_`): no modifica preguntes manuals, respostes d'alumnes, historial, columnes addicionals, anotacions ni càlculs. Després d'actualitzar el codi d'Apps Script, executa `optimitzarCorreccionsProjecte()` una vegada encara que ja l'hagueres executada amb una versió anterior. No cal crear cap columna nova.
+La funció crea la pestanya `Diagnostic`, afegeix sempre al final les capçaleres noves que falten i usa `CorreccionsIAPerNivell = 1` per reclassificar **totes les preguntes compatibles que ja hi haja en `Preguntes`**. Respecta la teoria i les construccions geomètriques, no esborra respostes, historial, columnes addicionals, anotacions ni càlculs. No cal crear, moure ni omplir cap columna manualment. Després crea una nova versió de la implementació web.
 
 ## Part 4 — Desplegar Apps Script
 

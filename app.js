@@ -56,7 +56,7 @@
       "progressBar", "badgeCount", "badgeList", "classGoalTitle", "classGoalValue", "classGoalBar", "goalCore",
       "journeyEyebrow", "journeyTitle", "journeyDescription", "missionMap", "currentMissionTitle",
       "currentMissionDescription", "openExerciseButton", "backToMapButton", "exerciseMissionLabel", "exerciseStepLabel",
-      "helpCounter", "questionContent", "answerForm", "standardAnswerFields", "answerInputLabel", "answerInput", "mathPreviewWrap", "mathPreview", "geometryEditor",
+      "helpCounter", "questionContent", "answerForm", "standardAnswerFields", "procedureNotice", "procedureNoticeText", "answerInputLabel", "answerInput", "mathPreviewWrap", "mathPreview", "geometryEditor",
       "geometryCanvas", "geometryUndoButton", "geometryClearButton", "geometryPointCount", "hintButton",
       "submitButton", "hintPanel", "hintTitle", "hintText", "hintQuestion", "resultPanel", "resultIcon", "resultTitle",
       "resultText", "nextExerciseButton", "loadingOverlay", "loadingText", "toastRegion", "rewardDialog", "rewardIcon",
@@ -355,7 +355,11 @@
   }
 
   function procedureParts(answer) {
-    return String(answer || "").split(/=|\r?\n/).map((part) => part.trim()).filter(Boolean);
+    return String(answer || "")
+      .replace(/\\(?:Rightarrow|rightarrow)|⇒|→/g, "\n")
+      .split(/={1,2}>?|\r?\n/)
+      .map((part) => part.replace(/^\s*(?:resposta|resultat|soluci[oó])\s*:\s*/i, "").trim())
+      .filter(Boolean);
   }
 
   function procedureIsSufficient(answer) {
@@ -392,8 +396,18 @@
     dom.answerInput.value = state.currentExercise.savedAnswer || "";
     dom.answerInput.disabled = false;
     dom.answerInputLabel.textContent = state.currentExercise.requiresProcedure ? "Escriu el teu procediment" : "Escriu la resposta";
+    dom.procedureNotice.classList.toggle("hidden", !state.currentExercise.requiresProcedure);
+    if (state.currentExercise.requiresProcedure) {
+      const minimum = Math.max(2, Number(state.currentExercise.minimumSteps || 2));
+      const reasoning = state.currentExercise.procedureMode === "RAONAMENT";
+      dom.procedureNoticeText.textContent = reasoning
+        ? `Escriu almenys ${minimum} passos: una raó o comprovació i una última línia «Resposta: ...».`
+        : `Escriu almenys ${minimum} expressions separades amb = o →, des de l’operació inicial fins al resultat.`;
+    }
     dom.answerInput.placeholder = state.currentExercise.requiresProcedure
-      ? "Escriu cada pas fins al resultat…"
+      ? (state.currentExercise.procedureMode === "RAONAMENT"
+        ? "Explica breument com ho saps…\nResposta: ..."
+        : "Escriu cada pas fins al resultat…")
       : "Escriu només el resultat o la resposta final…";
     const geometryExercise = isGeometryExercise();
     dom.standardAnswerFields.classList.toggle("hidden", geometryExercise);
@@ -465,7 +479,10 @@
     }
     if (!forced && !procedureIsSufficient(answer)) {
       const minimum = Math.max(2, Number(state.currentExercise.minimumSteps || 2));
-      toast(`Este exercici demana procediment: escriu almenys ${minimum} expressions o passos separats amb =. Posar només el resultat no dona energia.`, "warning", 8500);
+      const format = state.currentExercise.procedureMode === "RAONAMENT"
+        ? "una justificació i una línia final «Resposta: ...»"
+        : "expressions o passos separats amb = o →";
+      toast(`Este exercici demana procediment: escriu almenys ${minimum} passos (${format}). Posar només el resultat no dona energia.`, "warning", 8500);
       focusAnswerEditor();
       return;
     }

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=7">
   <link rel="stylesheet" href="battle.css?v=1">
   <script>
     window.MathJax = {
@@ -33,7 +33,7 @@
   <script defer src="geometry-editor.js?v=1"></script>
   <script defer src="firebase-service.js?v=7"></script>
   <script defer src="battle-service.js?v=1"></script>
-  <script defer src="app.js?v=12"></script>
+  <script defer src="app.js?v=14"></script>
   <script defer src="battle-student.js?v=1"></script>
 </head>
 <body class="theme-space">
@@ -218,6 +218,10 @@
 
           <form id="answerForm" class="answer-zone">
             <div id="standardAnswerFields">
+              <div id="procedureNotice" class="procedure-notice hidden" role="note">
+                <span aria-hidden="true">🧩</span>
+                <div><strong>Procediment obligatori</strong><small id="procedureNoticeText">Escriu l’operació inicial, els passos i el resultat final.</small></div>
+              </div>
               <label id="answerInputLabel" for="answerInput">Escriu la resposta</label>
               <textarea id="answerInput" rows="5" maxlength="12000" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Pots escriure els passos ací…"></textarea>
               <div id="mathPreviewWrap" class="math-preview-wrap hidden">

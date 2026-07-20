@@ -10,6 +10,7 @@
     solutionIndex: {},
     pendingProposals: [],
     pendingReviews: [],
+    diagnostics: [],
     selectedItem: null,
     commentTarget: null,
     liveRef: null,
@@ -28,7 +29,7 @@
   function cacheDom() {
     [
       "monitorSetupNotice", "firebaseState", "activeCount", "workingCount", "helpCount", "focusCount", "monitorGoalText",
-      "monitorGoalBar", "unlockMissionTitle", "unlockMissionText", "unlockNextMissionButton", "pendingProposalCard", "pendingProposalCount", "reviewProposalButton", "pendingReviewCard", "pendingReviewCount", "reviewProcedureButton", "searchInput", "statusFilter", "globalMissionSelect", "assignAllButton", "globalCommentButton",
+      "monitorGoalBar", "unlockMissionTitle", "unlockMissionText", "unlockNextMissionButton", "pendingProposalCard", "pendingProposalCount", "reviewProposalButton", "pendingReviewCard", "pendingReviewCount", "reviewProcedureButton", "diagnosticCard", "diagnosticCount", "diagnosticAverage", "openDiagnosticButton", "diagnosticDialog", "diagnosticRange", "diagnosticTotalBlocks", "diagnosticMeanScore", "diagnosticReinforcementCount", "diagnosticClassBody", "diagnosticStudentSelect", "diagnosticStudentDetail", "searchInput", "statusFilter", "globalMissionSelect", "assignAllButton", "globalCommentButton",
       "lastUpdateText", "studentGrid", "emptyMonitor", "assignDialog", "assignDialogTitle", "questionSelect", "questionPreview",
       "confirmAssignButton", "proposalDialog", "proposalDialogTitle", "proposalId", "proposalQuestion", "proposalMathPreview",
       "proposalAnswer", "proposalRoute", "proposalMethod", "proposalExplanation", "rejectProposalButton", "approveProposalButton",
@@ -98,6 +99,7 @@
     await loadCatalog();
     await loadPendingProposals();
     await loadPendingReviews();
+    await loadDiagnostics();
     startLive();
     if (window.GameBattleTeacher) window.GameBattleTeacher.start({
       getCatalog: () => state.catalog,
@@ -106,7 +108,7 @@
       setLoading
     });
     state.renderTimer = window.setInterval(render, 30000);
-    if (!window.GameData.isDemo()) state.proposalTimer = window.setInterval(() => { loadPendingProposals(); loadPendingReviews(); }, 60000);
+    if (!window.GameData.isDemo()) state.proposalTimer = window.setInterval(() => { loadPendingProposals(); loadPendingReviews(); loadDiagnostics(); }, 60000);
   }
 
   async function loginTeacher(event) {
@@ -320,6 +322,101 @@
     dom.pendingReviewCard.classList.toggle("hidden", state.pendingReviews.length < 1);
   }
 
+  async function loadDiagnostics() {
+    if (window.GameData.isDemo()) {
+      const now = new Date().toISOString();
+      state.diagnostics = [
+        { diagnosisId: "demo-d1", studentId: "u1", studentName: "Aina", missionId: "M01", route: "BASE", blockScore10: 7.5, exerciseScore10: 8, mastery: "EN_PROCES", confidence: .88, date: now, strengths: ["Calcula bé quan els signes són iguals"], difficulties: [{ code: "SIGNES_ENTERS", label: "Signes en nombres enters", confidence: .82, status: "SOSPITA", evidence: ["Exercicis 2 i 5"], recommendation: "Comparar valors absoluts abans d'operar" }], recommendation: "Practicar signes diferents." },
+        { diagnosisId: "demo-d2", studentId: "u2", studentName: "Biel", missionId: "M01", route: "SUPORT", blockScore10: 5, exerciseScore10: 5, mastery: "NECESSITA_REFORC", confidence: .94, date: now, strengths: ["Identifica l'operació"], difficulties: [{ code: "FALTA_PROCEDIMENT", label: "Falta de procediment", confidence: .98, status: "CONFIRMADA", evidence: ["Exercicis 1, 3 i 5"], recommendation: "Escriure cada transformació amb =" }], recommendation: "Reforçar el treball pas a pas." }
+      ];
+    } else {
+      try {
+        const data = await window.GameData.call("list_diagnostics");
+        state.diagnostics = data.diagnostics || [];
+      } catch (error) {
+        return;
+      }
+    }
+    updateDiagnosticSummary();
+  }
+
+  function diagnosticsForDays(days) {
+    const cutoff = Date.now() - Number(days || 31) * 24 * 60 * 60 * 1000;
+    return state.diagnostics.filter((item) => {
+      const timestamp = new Date(item.date || 0).getTime();
+      return timestamp && timestamp >= cutoff;
+    });
+  }
+
+  function updateDiagnosticSummary() {
+    const recent = diagnosticsForDays(31);
+    const average = recent.length ? recent.reduce((sum, item) => sum + Number(item.blockScore10 || 0), 0) / recent.length : 0;
+    dom.diagnosticCount.textContent = recent.length;
+    dom.diagnosticAverage.textContent = recent.length
+      ? `Mitjana dels últims 31 dies: ${average.toFixed(1)} / 10`
+      : "Encara no hi ha activitats diagnòstiques.";
+    if (dom.diagnosticDialog.open) renderDiagnosticDashboard();
+  }
+
+  function diagnosticDifficultyRows(items) {
+    const grouped = {};
+    items.forEach((diagnosis) => (diagnosis.difficulties || []).forEach((difficulty) => {
+      const key = String(difficulty.code || difficulty.label || "NO_DETERMINAT");
+      if (!grouped[key]) grouped[key] = { label: difficulty.label || key, students: new Set(), count: 0, confidence: 0 };
+      grouped[key].students.add(diagnosis.studentId);
+      grouped[key].count += 1;
+      grouped[key].confidence += Number(difficulty.confidence || 0);
+    }));
+    return Object.values(grouped).map((item) => ({ ...item, averageConfidence: item.count ? item.confidence / item.count : 0 }))
+      .sort((a, b) => b.students.size - a.students.size || b.count - a.count);
+  }
+
+  function renderDiagnosticDashboard() {
+    const items = diagnosticsForDays(dom.diagnosticRange.value || 31);
+    const average = items.length ? items.reduce((sum, item) => sum + Number(item.blockScore10 || 0), 0) / items.length : 0;
+    const reinforcementCount = state.pendingProposals.filter((item) => String(item.explanation || "").startsWith("REFORÇ DIAGNÒSTIC")).length;
+    dom.diagnosticTotalBlocks.textContent = items.length;
+    dom.diagnosticMeanScore.textContent = items.length ? `${average.toFixed(1)} / 10` : "—";
+    dom.diagnosticReinforcementCount.textContent = reinforcementCount;
+
+    const difficultyRows = diagnosticDifficultyRows(items);
+    dom.diagnosticClassBody.innerHTML = difficultyRows.length ? difficultyRows.map((item) => `
+      <tr><td>${window.GameMath.escapeHtml(item.label)}</td><td>${item.students.size}</td><td>${item.count}</td><td>${Math.round(item.averageConfidence * 100)}%</td></tr>
+    `).join("") : '<tr><td colspan="4">No hi ha dificultats registrades en este període.</td></tr>';
+
+    const selected = dom.diagnosticStudentSelect.value;
+    const students = [...new Map(items.map((item) => [item.studentId, item.studentName || item.studentId])).entries()]
+      .sort((a, b) => a[1].localeCompare(b[1], "ca", { sensitivity: "base" }));
+    dom.diagnosticStudentSelect.innerHTML = '<option value="">Tria un alumne</option>' + students.map(([id, name]) => `<option value="${window.GameMath.escapeHtml(id)}">${window.GameMath.escapeHtml(name)}</option>`).join("");
+    if (students.some(([id]) => id === selected)) dom.diagnosticStudentSelect.value = selected;
+    renderDiagnosticStudent(items);
+  }
+
+  function renderDiagnosticStudent(filteredItems) {
+    const studentId = dom.diagnosticStudentSelect.value;
+    if (!studentId) {
+      dom.diagnosticStudentDetail.innerHTML = "<p>Selecciona un alumne per veure la seua evolució.</p>";
+      return;
+    }
+    const items = filteredItems.filter((item) => item.studentId === studentId).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    if (!items.length) return;
+    const average = items.reduce((sum, item) => sum + Number(item.blockScore10 || 0), 0) / items.length;
+    const difficulties = diagnosticDifficultyRows(items).slice(0, 5);
+    const strengths = [...new Set(items.flatMap((item) => item.strengths || []))].slice(0, 4);
+    const latest = items[0];
+    dom.diagnosticStudentDetail.innerHTML = `
+      <h4>${window.GameMath.escapeHtml(latest.studentName || studentId)} · ${average.toFixed(1)} / 10</h4>
+      <p>${window.GameMath.escapeHtml(latest.recommendation || "Sense recomanació específica.")}</p>
+      <div class="diagnostic-tags">${difficulties.map((item) => `<span class="diagnostic-tag">${window.GameMath.escapeHtml(item.label)} · ${item.count}</span>`).join("")}</div>
+      ${strengths.length ? `<p><strong>Fortaleses:</strong> ${strengths.map(window.GameMath.escapeHtml).join(" · ")}</p>` : ""}
+      <div class="diagnostic-recent">${items.slice(0, 5).map((item) => `<article><strong>${window.GameMath.escapeHtml(item.missionId)} · ${window.GameMath.escapeHtml(item.route)} · ${Number(item.blockScore10 || 0).toFixed(1)}/10</strong><small>${window.GameMath.escapeHtml(item.mastery || "NO_CONCLOENT")} · confiança ${Math.round(Number(item.confidence || 0) * 100)}%</small></article>`).join("")}</div>`;
+  }
+
+  function openDiagnostic() {
+    renderDiagnosticDashboard();
+    dom.diagnosticDialog.showModal();
+  }
+
   async function openNextProcedureReview() {
     const review = state.pendingReviews[0];
     if (!review) return;
@@ -337,12 +434,13 @@
     if (!reviewId) return;
     setLoading(true, "Guardant la revisió…");
     try {
-      await window.GameData.call("decide_review", { reviewId, decision, comment: dom.procedureReviewComment.value });
+      const result = await window.GameData.call("decide_review", { reviewId, decision, comment: dom.procedureReviewComment.value });
       dom.procedureReviewDialog.close();
       state.pendingReviews = state.pendingReviews.filter((item) => item.reviewId !== reviewId);
       dom.pendingReviewCount.textContent = state.pendingReviews.length;
       dom.pendingReviewCard.classList.toggle("hidden", state.pendingReviews.length < 1);
-      toast("Revisió guardada.", "good");
+      toast(result.retryAssigned ? "Revisió guardada. L'exercici tornarà a aparéixer a l'alumne." : "Revisió guardada i nota actualitzada.", "good", 6500);
+      loadDiagnostics();
       if (state.pendingReviews.length) openNextProcedureReview();
     } catch (error) {
       toast(error.message, "error", 6500);
@@ -717,6 +815,9 @@
     dom.unlockNextMissionButton.addEventListener("click", unlockNextMission);
     dom.reviewProposalButton.addEventListener("click", reviewNextProposal);
     dom.reviewProcedureButton.addEventListener("click", openNextProcedureReview);
+    dom.openDiagnosticButton.addEventListener("click", openDiagnostic);
+    dom.diagnosticRange.addEventListener("change", renderDiagnosticDashboard);
+    dom.diagnosticStudentSelect.addEventListener("change", () => renderDiagnosticStudent(diagnosticsForDays(dom.diagnosticRange.value || 31)));
     dom.markCorrectButton.addEventListener("click", () => decideProcedureReview("CORRECTE"));
     dom.markPartialButton.addEventListener("click", () => decideProcedureReview("PARCIAL"));
     dom.markIncorrectButton.addEventListener("click", () => decideProcedureReview("INCORRECTE"));

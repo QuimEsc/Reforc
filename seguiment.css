@@ -117,6 +117,33 @@
 .proposal-fields { display: grid; grid-template-columns: 1fr 150px 1fr; gap: 9px; }
 .dialog-actions { display: grid; grid-template-columns: auto 1fr; gap: 10px; }
 .review-actions { grid-template-columns: repeat(3, 1fr); }
+.diagnostic-entry-card { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 18px; padding: 20px 24px; border-color: rgba(104,229,255,.28); background: linear-gradient(135deg, rgba(26,54,112,.88), rgba(27,31,79,.9)); }
+.diagnostic-entry-card h2 { margin: 3px 0; font: 700 1.2rem var(--font-display); }
+.diagnostic-entry-card h2 strong { color: var(--primary-2); font-size: 1.6rem; }
+.diagnostic-entry-card p:last-child { margin: 0; color: var(--muted); }
+.diagnostic-dialog { width: min(1050px, calc(100% - 24px)); }
+.diagnostic-heading, .diagnostic-student-heading { display: flex; align-items: end; justify-content: space-between; gap: 18px; }
+.diagnostic-heading label { min-width: 150px; color: var(--muted); font-size: .72rem; font-weight: 900; text-transform: uppercase; }
+.diagnostic-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 8px 0 22px; }
+.diagnostic-stats article { padding: 14px 16px; border: 1px solid rgba(255,255,255,.1); border-radius: 15px; background: rgba(0,0,0,.15); }
+.diagnostic-stats span, .diagnostic-stats strong { display: block; }
+.diagnostic-stats span { color: var(--muted); font-size: .72rem; font-weight: 900; text-transform: uppercase; }
+.diagnostic-stats strong { margin-top: 4px; color: var(--primary-2); font-size: 1.45rem; }
+.diagnostic-section { margin-top: 20px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.1); }
+.diagnostic-section h3 { margin: 0 0 12px; }
+.diagnostic-table-wrap { max-height: 300px; overflow: auto; }
+.diagnostic-table { width: 100%; border-collapse: collapse; }
+.diagnostic-table th, .diagnostic-table td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,.09); text-align: left; }
+.diagnostic-table th { position: sticky; top: 0; background: #1c285e; color: var(--primary-2); font-size: .75rem; text-transform: uppercase; }
+.diagnostic-student-heading select { width: min(320px, 50%); }
+.diagnostic-student-detail { min-height: 120px; padding: 16px; border: 1px solid rgba(255,255,255,.1); border-radius: 16px; background: rgba(0,0,0,.14); }
+.diagnostic-student-detail h4 { margin: 0 0 5px; font-size: 1.15rem; }
+.diagnostic-student-detail > p { color: var(--muted); }
+.diagnostic-tags { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0; }
+.diagnostic-tag { padding: 6px 9px; border-radius: 999px; background: rgba(255,203,102,.12); color: #ffe4a3; font-size: .75rem; font-weight: 800; }
+.diagnostic-recent { display: grid; gap: 8px; margin-top: 13px; }
+.diagnostic-recent article { padding: 10px 12px; border-left: 3px solid var(--primary-2); background: rgba(255,255,255,.04); }
+.diagnostic-recent small { display: block; color: var(--muted); }
 
 @media (max-width: 1100px) {
   .monitor-summary { grid-template-columns: repeat(4, 1fr); }
@@ -135,6 +162,9 @@
   .mission-unlock-card { align-items: stretch; flex-direction: column; }
   .mission-unlock-card .primary-button { width: 100%; }
   .pending-proposal-card { align-items: stretch; flex-direction: column; }
+  .diagnostic-entry-card, .diagnostic-heading, .diagnostic-student-heading { align-items: stretch; flex-direction: column; }
+  .diagnostic-stats { grid-template-columns: 1fr; }
+  .diagnostic-student-heading select { width: 100%; }
 }
 
 /* Mode batalla docent */

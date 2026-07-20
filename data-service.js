@@ -37,7 +37,7 @@
     }
 
     const controller = new AbortController();
-    const longAction = action.includes("suggest") || action === "help" || action === "list_proposals" || action === "submit";
+    const longAction = action.includes("suggest") || action === "help" || action === "list_proposals" || action === "list_diagnostics" || action === "submit";
     const timeout = window.setTimeout(() => controller.abort(), longAction ? 45000 : 30000);
     let response;
     try {
