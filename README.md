@@ -22,10 +22,12 @@ Aplicació web autònoma per a reforç de matemàtiques de 1r d'ESO. La carpeta 
 - Control de focus per sessió de 55 minuts:
   - primera eixida: avís;
   - següents eixides: enviament de la resposta actual.
+  - en el seguiment, l'alumne amb una incidència de focus activa puja al principi i la seua targeta queda marcada en roig durant 1 minut; si torna a eixir, el minut comença de nou.
 - Set insígnies il·lustrades per treball, procés, constància, ús d'ajudes i ampliació; sense rànquing. Les últimes es veuen al panell i la col·lecció completa al perfil.
 - Objectiu cooperatiu de classe alimentat per activitats individuals.
 - Pistes preparades i ajuda d'OpenAI amb MathJax.
-- Correcció de procediments amb IA, eixida estructurada i cua docent només per als casos dubtosos. Si la IA falla, la resposta es guarda i l'alumne continua.
+- Correcció híbrida: les respostes finals senzilles es validen directament en Apps Script i només els exercicis reservats per mostrar el procediment usen IA. Amb la configuració inicial, 950 dels 1.125 exercicis del banc són de correcció ràpida i un màxim de 175 (15,6 %) poden demanar validació d'OpenAI. Si la IA falla, la resposta es guarda i l'alumne continua.
+- En els exercicis `PROCEDIMENT`, un resultat correcte sense passos provoca un primer reintent obligatori. Si torna a ometre'ls, avança amb un 50 %, però sense energia, ratxa, insígnia ni aportació a l'objectiu de classe. Les respostes incorrectes tampoc generen recompenses.
 - Editor geomètric tàctil sobre quadrícula per construir punts, segments, angles, polígons, simetries, girs, translacions i circumferències. El banc inclou 45 construccions autocorregibles i el seguiment mostra la figura completa en temps real.
 - Reptes d'ampliació generats per IA per a qui completa cinc exercicis correctes en menys del temps configurat. El professor els ha d'aprovar, editar o rebutjar; són individuals i, si es completen bé, concedeixen la insígnia «Cometa veloç».
 - Mode de ruta automàtica configurable com `DESACTIVADA`, `SUGGERIR` o `AUTOMATICA`.
@@ -95,10 +97,12 @@ Les construccions geomètriques no s'envien com una imatge pesada: la resposta d
 
 La pissarra i la vista matemàtica de l'alumne comparteixen el mateix conversor. Reconeix fraccions (`5/3`), potències, arrels, matrius (`mat(...)`), determinants (`det(...)`), sistemes (`sis(...)`), límits i integrals. L'esborrany de l'explicació queda guardat només en el navegador del professor.
 
+El seguiment docent carrega `SolucioModel` mitjançant el catàleg privat d'Apps Script i la mostra, renderitzada amb MathJax, dins d'un desplegable de cada targeta d'alumne. Esta informació no s'escriu en Firebase ni s'envia a la interfície de l'alumnat.
+
 La pestanya `Sectors` guarda l'ambientació i la pestanya `Missions` conté `SectorId` i `Desbloquejada`. `PlansNivell` només guarda les excepcions que marques per alumne i missió; sense excepció, sempre es fan les tres fases en ordre. `RevisionsDocents` conté únicament procediments que la IA no ha pogut decidir amb seguretat. El mapa rep només les cinc missions del sector actual. Els reptes de la IA tenen `GeneradaIA=SI`: no compten dins de les activitats normals i només apareixen a l'alumne al qual els has aprovat.
 
 `PreguntesBatalla` conserva cinc preguntes ràpides per missió. En iniciar una batalla, Apps Script envia a Firebase un paquet tancat amb pregunta, resposta esperada, opcions i pista; el navegador corregeix localment i només Firebase sincronitza el joc en temps real. Apps Script torna a intervindre una única vegada al final per guardar `Batalles`, `ResultatsBatalla`, `PremisBatalla` i les insígnies permanents. `AvatarsAlumnes` manté quins avatars ha desbloquejat cada alumne i els préstecs temporals de set dies.
 
 ## OpenAI
 
-El backend usa `gpt-4o-mini` amb la Responses API i una eixida JSON estructurada. Les fórmules de les ajudes s'exigeixen en LaTeX delimitat i el navegador les renderitza amb MathJax. Fitxa oficial del model: <https://developers.openai.com/api/docs/models/gpt-4o-mini>.
+El backend usa `gpt-4o-mini` amb la Responses API i una eixida JSON estructurada. Les fórmules de les ajudes s'exigeixen en LaTeX delimitat i el navegador les renderitza amb MathJax. La fila `CorreccionsIAPerNivell` de `Configuracio` val inicialment `1`: conserva com a exercici de procediment l'últim de cada bloc de cinc quan eixe contingut ho requereix. Els altres es corregeixen per resultat, sense xarxa ni cost d'OpenAI. Fitxa oficial del model: <https://developers.openai.com/api/docs/models/gpt-4o-mini>.

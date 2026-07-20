@@ -80,6 +80,7 @@
       state: "WORKING",
       focusState: "VISIBLE",
       submissionReason: "normal",
+      focusIncidentAt: 0,
       startedAt: now,
       updatedAt: now
     });
@@ -100,6 +101,7 @@
     ["helpCount", "state", "focusState", "submissionReason"].forEach((key) => {
       if (Object.prototype.hasOwnProperty.call(changes, key)) payload[key] = changes[key];
     });
+    if (changes.focusIncident) payload.focusIncidentAt = window.firebase.database.ServerValue.TIMESTAMP;
     await liveRef.update(payload);
   }
 

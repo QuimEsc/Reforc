@@ -36,6 +36,7 @@
     submitting: false,
     submittedExerciseId: "",
     autoAdvancePending: false,
+    retryFeedback: "",
     lastFocusLossAt: 0,
     pendingFocusWarning: false,
     answerDebounce: null,
@@ -54,7 +55,7 @@
       "progressBar", "badgeCount", "badgeList", "classGoalTitle", "classGoalValue", "classGoalBar", "goalCore",
       "journeyEyebrow", "journeyTitle", "journeyDescription", "missionMap", "currentMissionTitle",
       "currentMissionDescription", "openExerciseButton", "backToMapButton", "exerciseMissionLabel", "exerciseStepLabel",
-      "helpCounter", "questionContent", "answerForm", "standardAnswerFields", "answerInput", "mathPreviewWrap", "mathPreview", "geometryEditor",
+      "helpCounter", "questionContent", "answerForm", "standardAnswerFields", "answerInputLabel", "answerInput", "mathPreviewWrap", "mathPreview", "geometryEditor",
       "geometryCanvas", "geometryUndoButton", "geometryClearButton", "geometryPointCount", "hintButton",
       "submitButton", "hintPanel", "hintTitle", "hintText", "hintQuestion", "resultPanel", "resultIcon", "resultTitle",
       "resultText", "nextExerciseButton", "loadingOverlay", "loadingText", "toastRegion", "rewardDialog", "rewardIcon",
@@ -164,6 +165,7 @@
       state.currentMission = data.currentMission || null;
       state.currentExercise = data.currentExercise || null;
       state.nextExercise = null;
+      state.retryFeedback = "";
       state.stats = data.stats || {};
       state.badges = data.badges || [];
       state.classGoal = data.classGoal || { title: "Energia de la classe", value: 0, target: 100 };
@@ -345,6 +347,7 @@
 
   async function openExercise() {
     if (!state.currentExercise) return;
+    dom.nextExerciseButton.innerHTML = 'Continuar <span>→</span>';
     state.helpCount = Number(state.currentExercise.helpCount || 0);
     state.submittedExerciseId = "";
     state.autoAdvancePending = false;
@@ -353,6 +356,10 @@
     dom.exerciseStepLabel.textContent = `${state.currentExercise.levelLabel || "Fase"} · Exercici ${state.currentExercise.levelStep || 1} de ${state.currentExercise.levelTotal || 5}`;
     dom.answerInput.value = state.currentExercise.savedAnswer || "";
     dom.answerInput.disabled = false;
+    dom.answerInputLabel.textContent = state.currentExercise.requiresProcedure ? "Escriu el teu procediment" : "Escriu la resposta";
+    dom.answerInput.placeholder = state.currentExercise.requiresProcedure
+      ? "Escriu cada pas fins al resultat…"
+      : "Escriu només el resultat o la resposta final…";
     const geometryExercise = isGeometryExercise();
     dom.standardAnswerFields.classList.toggle("hidden", geometryExercise);
     dom.geometryEditor.classList.toggle("hidden", !geometryExercise);
@@ -442,6 +449,7 @@
       await syncLive(() => window.GameLive.markSubmitted(reason, answer, currentAnswerPreview()));
       state.submittedExerciseId = state.currentExercise.exerciseId;
       state.nextExercise = data.nextExercise || null;
+      state.retryFeedback = data.mustRetry ? String(data.feedback || "Falta mostrar el procediment abans de continuar.") : "";
       state.missions = data.missions || state.missions;
       state.sector = data.sector || state.sector;
       state.waitingForUnlock = Boolean(data.waitingForUnlock);
@@ -459,8 +467,9 @@
       const pendingReview = data.correctionStatus === "REVISAR_DOCENT" || data.needsTeacherReview;
       const partial = data.correctionStatus === "PARCIAL";
       dom.resultPanel.classList.toggle("incorrect", !data.correct);
-      dom.resultIcon.textContent = data.correct ? "✓" : (pendingReview ? "?" : (partial ? "½" : "↻"));
-      dom.resultTitle.textContent = data.correct ? "Repte superat" : (pendingReview ? "Pendent de revisió" : (partial ? "Procediment parcial" : "Resposta guardada"));
+      dom.resultIcon.textContent = data.correct ? "✓" : (pendingReview ? "?" : (data.mustRetry ? "↻" : (partial ? "½" : "↻")));
+      dom.resultTitle.textContent = data.correct ? "Repte superat" : (pendingReview ? "Pendent de revisió" : (data.mustRetry ? "Falten els passos" : (partial ? "Procediment parcial" : "Resposta guardada")));
+      dom.nextExerciseButton.innerHTML = data.mustRetry ? 'Tornar-ho a intentar <span>↻</span>' : 'Continuar <span>→</span>';
       await window.GameMath.setText(dom.resultText, data.feedback || "La resposta s'ha guardat.");
       dom.resultPanel.classList.remove("hidden");
       updateStats(data.stats || state.stats, data.badges || state.badges, data.classGoal || state.classGoal);
@@ -484,15 +493,20 @@
     }
   }
 
-  function continueAfterResult() {
+  async function continueAfterResult() {
     if (!state.submittedExerciseId) return;
     if (state.nextExercise) {
+      const retryingSameExercise = state.nextExercise.exerciseId === state.currentExercise.exerciseId;
+      const retryFeedback = state.retryFeedback;
       state.currentExercise = state.nextExercise;
       state.nextExercise = null;
       state.submittedExerciseId = "";
-      openExercise();
+      state.retryFeedback = "";
+      await openExercise();
+      if (retryingSameExercise) toast(retryFeedback || "Torna-ho a intentar mostrant el procediment.", "warning", 8500);
       return;
     }
+    state.retryFeedback = "";
     refreshBootstrap();
   }
 
@@ -674,7 +688,7 @@
     if (now - state.lastFocusLossAt < 1400) return;
     state.lastFocusLossAt = now;
     const focus = readFocusSession() || prepareFocusSession(state.student.studentId);
-    syncLive(() => window.GameLive.updateDynamic({ focusState: "HIDDEN", submissionReason: reason }));
+    syncLive(() => window.GameLive.updateDynamic({ focusState: "HIDDEN", submissionReason: reason, focusIncident: true }));
     if (!focus.warned) {
       focus.warned = true;
       sessionStorage.setItem(FOCUS_KEY, JSON.stringify(focus));
@@ -702,6 +716,7 @@
     window.GameLive.stopListeners();
     state.student = null;
     state.currentExercise = null;
+    state.retryFeedback = "";
     state.sessionId = "";
     state.pendingAvatarChoice = false;
     sessionStorage.removeItem(STUDENT_KEY);

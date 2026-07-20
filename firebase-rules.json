@@ -1,0 +1,115 @@
+{
+  "rules": {
+    "live": {
+      ".read": true,
+      "$grup": {
+        ".indexOn": ["updatedAt", "alumne"],
+        "$id": {
+          ".write": true,
+          ".validate": "newData.exists() ? newData.hasChildren(['grup', 'alumne', 'preguntaTitol', 'pregunta', 'preview', 'resposta', 'updatedAt']) : true",
+          "grup": { ".validate": "newData.isString() && newData.val().length <= 10" },
+          "alumne": { ".validate": "newData.isString() && newData.val().length <= 80" },
+          "apartat": { ".validate": "newData.isString() && newData.val().length <= 10000" },
+          "preguntaTitol": { ".validate": "newData.isString() && newData.val().length <= 80" },
+          "pregunta": { ".validate": "newData.isString() && newData.val().length <= 10000" },
+          "preguntaHtml": { ".validate": "newData.isString() && newData.val().length <= 100000" },
+          "solucio": { ".validate": "newData.isString() && newData.val().length <= 50000" },
+          "preview": { ".validate": "newData.isString() && newData.val().length <= 500" },
+          "previewMath": { ".validate": "newData.isString() && newData.val().length <= 5000" },
+          "resposta": { ".validate": "newData.isString() && newData.val().length <= 12000" },
+          "respostaMath": { ".validate": "newData.isString() && newData.val().length <= 20000" },
+          "respostaGuardada": { ".validate": "newData.isString() && newData.val().length <= 30000" },
+          "correccioGuardada": { ".validate": "newData.isString() && newData.val().length <= 30000" },
+          "tipusCorreccio": { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "id": { ".validate": "newData.isString() && newData.val().length <= 80" },
+          "exerciciId": { ".validate": "newData.isString() && newData.val().length <= 80" },
+          "updatedAt": { ".validate": "newData.isNumber()" },
+          "$other": { ".validate": false }
+        }
+      }
+    },
+    "comments": {
+      ".read": true,
+      "$grup": {
+        "$id": {
+          ".write": true,
+          ".validate": "newData.exists() ? newData.hasChildren(['text', 'updatedAt']) : true",
+          "text": { ".validate": "newData.isString() && newData.val().length <= 2000" },
+          "updatedAt": { ".validate": "newData.isNumber()" },
+          "$other": { ".validate": false }
+        }
+      }
+    },
+    "gamificacio": {
+      ".read": true,
+      "live": {
+        "$grup": {
+          ".indexOn": ["updatedAt", "studentName", "state"],
+          "$session": {
+            ".write": true,
+            ".validate": "newData.exists() ? newData.hasChildren(['groupId', 'sessionId', 'studentId', 'studentName', 'exerciseId', 'questionHtml', 'answer', 'state', 'updatedAt']) : true",
+            "groupId": { ".validate": "newData.isString() && newData.val().length <= 50" },
+            "sessionId": { ".validate": "newData.isString() && newData.val().length <= 100" },
+            "studentId": { ".validate": "newData.isString() && newData.val().length <= 100" },
+            "studentName": { ".validate": "newData.isString() && newData.val().length <= 80" },
+            "route": { ".validate": "newData.isString() && newData.val().matches(/^(SUPORT|BASE|REPTE)$/)" },
+            "levelPlan": { ".validate": "newData.isString() && newData.val().length <= 100" },
+            "exerciseId": { ".validate": "newData.isString() && newData.val().length <= 100" },
+            "missionId": { ".validate": "newData.isString() && newData.val().length <= 100" },
+            "missionTitle": { ".validate": "newData.isString() && newData.val().length <= 200" },
+            "questionHtml": { ".validate": "newData.isString() && newData.val().length <= 50000" },
+            "expectedAnswer": { ".validate": "newData.isString() && newData.val().length <= 5000" },
+            "interactionType": { ".validate": "newData.isString() && newData.val().length <= 100" },
+            "answer": { ".validate": "newData.isString() && newData.val().length <= 12000" },
+            "answerPreviewHtml": { ".validate": "newData.isString() && newData.val().length <= 20000" },
+            "helpCount": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 20" },
+            "state": { ".validate": "newData.isString() && newData.val().matches(/^(WORKING|SUBMITTED|NEEDS_TEACHER)$/)" },
+            "focusState": { ".validate": "newData.isString() && newData.val().matches(/^(VISIBLE|HIDDEN)$/)" },
+            "submissionReason": { ".validate": "newData.isString() && newData.val().matches(/^(normal|focus_hidden|window_blur)$/)" },
+            "focusIncidentAt": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+            "startedAt": { ".validate": "newData.isNumber()" },
+            "updatedAt": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          }
+        }
+      },
+      "comments": {
+        "$grup": {
+          "$session": {
+            ".write": true,
+            ".validate": "newData.exists() ? newData.hasChildren(['text', 'updatedAt']) : true",
+            "text": { ".validate": "newData.isString() && newData.val().length <= 2000" },
+            "updatedAt": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          }
+        }
+      },
+      "classGoal": {
+        "$grup": {
+          "$mission": {
+            ".write": true,
+            "value": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
+            "$other": { ".validate": false }
+          }
+        }
+      },
+      "notifications": {
+        "$grup": {
+          "$session": {
+            ".write": true,
+            ".validate": "newData.exists() ? newData.hasChildren(['text', 'updatedAt']) : true",
+            "text": { ".validate": "newData.isString() && newData.val().length <= 2000" },
+            "updatedAt": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          }
+        }
+      },
+      "battles": {
+        "$grup": {
+          ".read": true,
+          ".write": true
+        }
+      }
+    }
+  }
+}

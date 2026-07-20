@@ -2,9 +2,11 @@
   "use strict";
 
   const config = window.GAMIFICACIO_CONFIG;
+  const FOCUS_ALERT_MS = 60 * 1000;
   const state = {
     items: [],
-    catalog: { sectors: [], missions: [], questions: [], levelPlans: [], nextLockedMission: null },
+    catalog: { sectors: [], missions: [], questions: [], solutions: [], levelPlans: [], nextLockedMission: null },
+    solutionIndex: {},
     pendingProposals: [],
     pendingReviews: [],
     selectedItem: null,
@@ -13,6 +15,7 @@
     goalRef: null,
     demoTimer: null,
     renderTimer: null,
+    focusExpiryTimer: null,
     proposalTimer: null,
     started: false,
     eventsBound: false
@@ -56,11 +59,13 @@
     if (state.goalRef) state.goalRef.off();
     if (state.demoTimer) window.clearInterval(state.demoTimer);
     if (state.renderTimer) window.clearInterval(state.renderTimer);
+    if (state.focusExpiryTimer) window.clearTimeout(state.focusExpiryTimer);
     if (state.proposalTimer) window.clearInterval(state.proposalTimer);
     state.liveRef = null;
     state.goalRef = null;
     state.demoTimer = null;
     state.renderTimer = null;
+    state.focusExpiryTimer = null;
     state.proposalTimer = null;
     state.started = false;
     if (window.GameBattleTeacher) window.GameBattleTeacher.stop();
@@ -142,6 +147,27 @@
     return item.state || "WORKING";
   }
 
+  function hasFocusIncident(item) {
+    if (statusOf(item) === "INACTIVE") return false;
+    const incidentAt = Number(item.focusIncidentAt || 0);
+    return incidentAt > 0 && Date.now() - incidentAt < FOCUS_ALERT_MS;
+  }
+
+  function scheduleFocusExpiry() {
+    if (state.focusExpiryTimer) window.clearTimeout(state.focusExpiryTimer);
+    state.focusExpiryTimer = null;
+    const now = Date.now();
+    const nextExpiry = state.items
+      .map((item) => Number(item.focusIncidentAt || 0) + FOCUS_ALERT_MS)
+      .filter((expiry) => expiry > now)
+      .sort((a, b) => a - b)[0];
+    if (!nextExpiry) return;
+    state.focusExpiryTimer = window.setTimeout(() => {
+      state.focusExpiryTimer = null;
+      render();
+    }, Math.max(50, nextExpiry - now + 50));
+  }
+
   function makeDemoItems() {
     const now = Date.now();
     const base = window.GamificacioDemo.EXERCISES;
@@ -165,6 +191,7 @@
         state: index === 2 ? "NEEDS_TEACHER" : "WORKING",
         focusState: index === 1 ? "HIDDEN" : "VISIBLE",
         submissionReason: index === 1 ? "focus_hidden" : "normal",
+        focusIncidentAt: index === 1 ? now - 10000 : 0,
         updatedAt: now - index * 47000
       };
     });
@@ -177,6 +204,11 @@
       state.catalog.sectors = data.sectors || [];
       state.catalog.missions = data.missions || [];
       state.catalog.questions = data.questions || [];
+      state.catalog.solutions = data.solutions || [];
+      state.solutionIndex = state.catalog.solutions.reduce((index, solution) => {
+        index[String(solution.id || "")] = solution;
+        return index;
+      }, {});
       state.catalog.levelPlans = data.levelPlans || [];
       state.catalog.nextLockedMission = data.nextLockedMission || null;
       dom.globalMissionSelect.innerHTML = '<option value="">Tria una missió</option>';
@@ -332,7 +364,8 @@
     return state.items
       .filter((item) => !search || String(item.studentName || "").toLowerCase().includes(search))
       .filter((item) => filter === "ALL" || statusOf(item) === filter)
-      .sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0));
+      .sort((a, b) => Number(hasFocusIncident(b)) - Number(hasFocusIncident(a))
+        || Number(b.updatedAt || 0) - Number(a.updatedAt || 0));
   }
 
   function renderGoal(percent) {
@@ -343,6 +376,7 @@
 
   async function render() {
     const items = filteredItems();
+    scheduleFocusExpiry();
     const now = Date.now();
     const activeItems = state.items.filter((item) => now - Number(item.updatedAt || 0) <= 10 * 60 * 1000);
     dom.activeCount.textContent = activeItems.length;
@@ -362,13 +396,24 @@
     return String(item.levelPlan || "SUPORT,BASE,REPTE");
   }
 
+  function solutionHtmlFor(item) {
+    const solution = state.solutionIndex[String(item.exerciseId || "")] || {};
+    const model = String(solution.modelSolution || "").trim();
+    const expected = String(solution.expectedAnswer || "").trim();
+    const value = model || (expected ? `Resposta esperada: ${expected}` : "No hi ha una solució model preparada.");
+    if (/<[a-z][\s\S]*>/i.test(value)) return window.GameMath.sanitiseHtml(value);
+    return window.GameMath.sanitiseHtml(window.GameMath.studentTextToHtml(value));
+  }
+
   function buildCard(item) {
     const status = statusOf(item);
+    const focusIncident = hasFocusIncident(item);
     const card = document.createElement("article");
-    card.className = `student-card ${status === "NEEDS_TEACHER" ? "needs-teacher" : ""} ${status === "INACTIVE" ? "inactive" : ""}`.trim();
-    const statusLabel = status === "NEEDS_TEACHER" ? "Necessita ajuda" : status === "SUBMITTED" ? "Enviada" : status === "INACTIVE" ? "Inactiu" : "Treballant";
-    const statusClass = status === "NEEDS_TEACHER" ? "help" : status === "INACTIVE" ? "off" : "";
+    card.className = `student-card ${focusIncident ? "focus-loss" : ""} ${status === "NEEDS_TEACHER" ? "needs-teacher" : ""} ${status === "INACTIVE" ? "inactive" : ""}`.trim();
+    const statusLabel = focusIncident ? "Fora de la pàgina" : status === "NEEDS_TEACHER" ? "Necessita ajuda" : status === "SUBMITTED" ? "Enviada" : status === "INACTIVE" ? "Inactiu" : "Treballant";
+    const statusClass = focusIncident ? "focus-loss" : status === "NEEDS_TEACHER" ? "help" : status === "INACTIVE" ? "off" : "";
     const answerHtml = item.answerPreviewHtml || (item.answer ? window.GameMath.studentTextToHtml(item.answer) : "");
+    const solutionHtml = solutionHtmlFor(item);
     const flags = [
       `<span class="flag">Fase actual: ${window.GameMath.escapeHtml(item.route || "SUPORT")}</span>`,
       `<span class="flag">💡 ${Number(item.helpCount || 0)} ajudes</span>`,
@@ -384,6 +429,10 @@
         <div class="mission-line"><span>${window.GameMath.escapeHtml(item.missionTitle || item.missionId || "Missió")}</span><small>${window.GameMath.escapeHtml(item.exerciseId || "")}</small></div>
         <div class="monitor-question math-content">${window.GameMath.sanitiseHtml(item.questionHtml || "Sense pregunta")}</div>
         <div class="monitor-answer math-content ${answerHtml ? "" : "empty"}">${answerHtml ? window.GameMath.sanitiseHtml(answerHtml) : "Encara no ha escrit res."}</div>
+        <details class="monitor-solution">
+          <summary>Solució model</summary>
+          <div class="monitor-solution-content math-content">${solutionHtml}</div>
+        </details>
         <div class="card-flags">${flags}</div>
         <div class="card-controls">
           <select class="level-select" aria-label="Fases de ${window.GameMath.escapeHtml(item.studentName)}">

@@ -90,9 +90,22 @@ Pots desactivar temporalment la IA canviant:
 var OPENAI_ACTIU = false;
 ```
 
-Els exercicis `PROCEDIMENT` necessiten la IA per comprovar transformacions alternatives i no només el resultat final. Si la IA està desactivada, falla o supera una quota, la resposta **no es perd ni bloqueja l'alumne**: queda com `REVISAR_DOCENT` en la cua de seguiment.
+Els exercicis `NUMERICA` i `EXACTA` es corregeixen directament en Apps Script, sense cridar OpenAI. Els exercicis `PROCEDIMENT` reserven la IA per comprovar transformacions alternatives i no només el resultat final. La configuració inicial conserva com a màxim un exercici de procediment en cada bloc de cinc i nivell; la resta són de resposta ràpida. Si la IA està desactivada, falla o supera una quota, la resposta **no es perd ni bloqueja l'alumne**: queda com `REVISAR_DOCENT` en la cua de seguiment.
+
+En una pregunta `PROCEDIMENT`, si el resultat és correcte però falten passos, el primer enviament queda `EN_CURS` i obliga a repetir la mateixa activitat. Si l'alumne torna a ometre'ls, pot avançar amb un 50 %, però no rep energia, ratxa, insígnies ni aporta a l'objectiu cooperatiu. Només un procediment validat pot concedir la insígnia `PAS_A_PAS`.
 
 Deixa `DEBUG_IA_ACTIU = false` durant les classes. Això evita una escriptura addicional en Sheets per cada correcció. Activa-ho només temporalment quan vulgues diagnosticar una resposta de l'API.
+
+### Si ja havies creat les 1.125 preguntes
+
+No tornes a executar `configurarProjecte()` ni esborres cap pestanya:
+
+1. Substitueix en Apps Script els continguts de `Code.gs` i `Contingut.gs` per les versions noves de la carpeta `Gamificacio/apps-script`.
+2. Guarda el projecte.
+3. Tria la funció `optimitzarCorreccionsProjecte` i executa-la **una sola vegada**.
+4. Quan aparega el missatge de finalització, crea una nova versió de la implementació web.
+
+La funció afegeix automàticament la configuració `CorreccionsIAPerNivell = 1` i només adapta les preguntes curriculars creades pel programa (`CURR_`). No toca preguntes manuals, respostes d'alumnes, pestanyes d'historial, columnes addicionals, anotacions ni càlculs. Tampoc cal crear cap columna nova.
 
 ## Part 4 — Desplegar Apps Script
 

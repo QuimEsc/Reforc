@@ -31,9 +31,9 @@
   <script defer src="data-service.js?v=2"></script>
   <script defer src="math-render.js?v=3"></script>
   <script defer src="geometry-editor.js?v=1"></script>
-  <script defer src="firebase-service.js?v=4"></script>
+  <script defer src="firebase-service.js?v=5"></script>
   <script defer src="battle-service.js?v=1"></script>
-  <script defer src="app.js?v=8"></script>
+  <script defer src="app.js?v=10"></script>
   <script defer src="battle-student.js?v=1"></script>
 </head>
 <body class="theme-space">
@@ -218,7 +218,7 @@
 
           <form id="answerForm" class="answer-zone">
             <div id="standardAnswerFields">
-              <label for="answerInput">Escriu el teu procediment o resposta</label>
+              <label id="answerInputLabel" for="answerInput">Escriu la resposta</label>
               <textarea id="answerInput" rows="5" maxlength="12000" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Pots escriure els passos ací…"></textarea>
               <div id="mathPreviewWrap" class="math-preview-wrap hidden">
                 <span>Vista matemàtica</span>
