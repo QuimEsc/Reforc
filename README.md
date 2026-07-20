@@ -93,6 +93,8 @@ Al final del curs, la funció manual `reiniciarDadesFinalDeCurs()` elimina totes
 
 `Dades` conserva en les primeres 14 columnes l'estructura familiar del sistema anterior, inclosa `MotiuEnviament` en la columna N. Els camps nous comencen en O. El backend treballa pels noms de les capçaleres i no per posicions fixes. `actualitzarProjecteDiagnosi()` afegeix al final, sense moure cap columna existent, els camps de nota i diagnosi que falten.
 
+`actualitzarProcedimentsProjecte()` permet corregir el banc curricular ja existent sense recrear-lo: sincronitza la guia de resposta, el mode de càlcul o raonament, `PassosMinims`, `CriteriIA` i `SolucioModel`. Només actua sobre les files `CURR_*`; les activitats manuals, les construccions i totes les dades de l'alumnat queden intactes.
+
 En `Usuaris`, el backend afegeix automàticament al final la columna `CanvisAvatarDisponibles` si encara no existeix. Només conté `0` o `1`, no desplaça ni sobreescriu cap columna existent i no s'ha d'editar manualment.
 
 L'enllaç de seguiment només es mostra en la pantalla inicial. Desapareix quan l'alumne entra en les missions o en una activitat. El panell docent valida la contrasenya en Apps Script i manté la sessió oberta durant un màxim de sis hores.

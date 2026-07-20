@@ -401,8 +401,10 @@
       const minimum = Math.max(2, Number(state.currentExercise.minimumSteps || 2));
       const reasoning = state.currentExercise.procedureMode === "RAONAMENT";
       dom.procedureNoticeText.textContent = reasoning
-        ? `Escriu almenys ${minimum} passos: una raó o comprovació i una última línia «Resposta: ...».`
-        : `Escriu almenys ${minimum} expressions separades amb = o →, des de l’operació inicial fins al resultat.`;
+        ? "Escriu una raó o comprovació i acaba amb una última línia «Resposta: ...»."
+        : (minimum <= 2
+          ? "Escriu l’operació completa i el resultat units amb =."
+          : `Escriu almenys ${minimum} expressions separades amb = o →, des de l’operació inicial fins al resultat.`);
     }
     dom.answerInput.placeholder = state.currentExercise.requiresProcedure
       ? (state.currentExercise.procedureMode === "RAONAMENT"
@@ -479,10 +481,13 @@
     }
     if (!forced && !procedureIsSufficient(answer)) {
       const minimum = Math.max(2, Number(state.currentExercise.minimumSteps || 2));
-      const format = state.currentExercise.procedureMode === "RAONAMENT"
-        ? "una justificació i una línia final «Resposta: ...»"
-        : "expressions o passos separats amb = o →";
-      toast(`Este exercici demana procediment: escriu almenys ${minimum} passos (${format}). Posar només el resultat no dona energia.`, "warning", 8500);
+      const reasoning = state.currentExercise.procedureMode === "RAONAMENT";
+      const message = reasoning
+        ? "Este exercici demana una justificació breu i una línia final «Resposta: ...». Posar només el resultat no dona energia."
+        : (minimum <= 2
+          ? "Este exercici demana el càlcul complet: escriu l’operació i el resultat units amb =. Posar només el resultat no dona energia."
+          : `Este exercici demana procediment: escriu almenys ${minimum} expressions o passos separats amb = o →. Posar només el resultat no dona energia.`);
+      toast(message, "warning", 8500);
       focusAnswerEditor();
       return;
     }

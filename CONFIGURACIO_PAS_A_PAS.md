@@ -108,6 +108,12 @@ No tornes a executar `configurarProjecte()` ni esborres cap pestanya:
 
 La funció crea la pestanya `Diagnostic`, afegeix sempre al final les capçaleres noves que falten i usa `CorreccionsIAPerNivell = 1` per reclassificar **totes les preguntes compatibles que ja hi haja en `Preguntes`**. Respecta la teoria i les construccions geomètriques, no esborra respostes, historial, columnes addicionals, anotacions ni càlculs. No cal crear, moure ni omplir cap columna manualment. Després crea una nova versió de la implementació web.
 
+### Ajustar els procediments de les preguntes ja creades
+
+Després d'actualitzar `Code.gs` i `Contingut.gs`, executa una vegada `actualitzarProcedimentsProjecte()`. La funció revisa les 1.125 preguntes curriculars i ajusta la instrucció visible, `PassosMinims`, `CriteriIA` i `SolucioModel` segons l'activitat real. Per exemple, una suma directa de suport admet `operació = resultat`, mentre una suma amb `+(-n)` exigeix mostrar també la transformació del signe.
+
+Només modifica files amb un `MetodeId` curricular del projecte. No toca activitats manuals, construccions geomètriques, respostes, progrés, notes, anotacions ni columnes addicionals. No tornes a executar `configurarProjecte()` i no has de crear cap columna nova.
+
 ### Reiniciar el projecte al final del curs
 
 No tornes a executar `configurarProjecte()` i no esborres pestanyes manualment:
