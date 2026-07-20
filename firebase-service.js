@@ -65,19 +65,18 @@
     }
 
     if (previous) {
-      const claim = await liveRef.transaction((value) => {
-        if (!value) return;
-        const ownerStartedAt = Number(value.startedAt || 0);
-        if (ownerStartedAt > context.startedAt && value.sessionId !== context.sessionId) return;
-        return {
-          ...value,
-          sessionId: context.sessionId,
-          studentId: context.studentId,
-          studentName: context.studentName,
-          startedAt: context.startedAt,
-          updatedAt: window.firebase.database.ServerValue.TIMESTAMP
-        };
-      }, undefined, false);
+      // Entrar de nou sempre reclama la targeta de l'alumne. No comparem hores
+      // dels dispositius: poden estar desajustades i bloquejar una reconnexió
+      // legítima. La transacció conserva l'esborrany i canvia només el
+      // propietari; l'altra pantalla rebrà el nou sessionId i es tancarà.
+      const claim = await liveRef.transaction((value) => ({
+        ...(value || previous),
+        sessionId: context.sessionId,
+        studentId: context.studentId,
+        studentName: context.studentName,
+        startedAt: context.startedAt,
+        updatedAt: window.firebase.database.ServerValue.TIMESTAMP
+      }), undefined, false);
       currentOwner = Boolean(claim.committed && claim.snapshot.val() && claim.snapshot.val().sessionId === context.sessionId);
     } else {
       currentOwner = true;
@@ -160,8 +159,9 @@
       updatedAt: now
     };
     const result = await liveRef.transaction((value) => {
-      if (value && value.sessionId && value.sessionId !== context.sessionId
-        && Number(value.startedAt || 0) > context.startedAt) return;
+      // Una pantalla antiga no pot recuperar la targeta després que una nova
+      // sessió l'haja reclamada, independentment del rellotge de cada aparell.
+      if (value && value.sessionId && value.sessionId !== context.sessionId) return;
       return payload;
     }, undefined, false);
     currentOwner = Boolean(result.committed && result.snapshot.val() && result.snapshot.val().sessionId === context.sessionId);
