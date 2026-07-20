@@ -47,7 +47,7 @@
 .student-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px; }
 .student-card { overflow: hidden; border: 1px solid var(--stroke); border-radius: 22px; background: var(--panel); box-shadow: 0 16px 36px rgba(0,0,0,.17); }
 .student-card.needs-teacher { border-color: rgba(255,182,92,.6); box-shadow: 0 0 0 3px rgba(255,182,92,.08), 0 16px 36px rgba(0,0,0,.17); }
-.student-card.focus-loss { border: 2px solid #ff4d6d; box-shadow: 0 0 0 4px rgba(255,77,109,.14), 0 18px 44px rgba(179,20,52,.28); animation: focusLossPulse 1.5s ease-in-out infinite alternate; }
+.student-card.focus-loss { position: relative; border: 3px solid #ff3158; outline: 2px solid rgba(255,49,88,.28); outline-offset: 2px; box-shadow: 0 0 0 5px rgba(255,49,88,.16), 0 18px 44px rgba(179,20,52,.32); animation: focusLossPulse 1.5s ease-in-out infinite alternate; }
 .student-card.focus-loss .student-card-header { border-bottom-color: rgba(255,77,109,.3); background: linear-gradient(90deg, rgba(255,77,109,.17), rgba(255,255,255,.035)); }
 .student-card.inactive { opacity: .66; }
 .student-card-header { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 14px 15px; border-bottom: 1px solid var(--stroke); background: rgba(255,255,255,.035); }
@@ -62,7 +62,7 @@
 .live-status.focus-loss::before { background: #ff4d6d; box-shadow: 0 0 0 4px rgba(255,77,109,.16); }
 .live-status.off { color: #c4c9d9; background: rgba(120,130,155,.16); }
 .live-status.off::before { background: #7c879f; }
-@keyframes focusLossPulse { from { box-shadow: 0 0 0 3px rgba(255,77,109,.1), 0 18px 44px rgba(179,20,52,.22); } to { box-shadow: 0 0 0 6px rgba(255,77,109,.2), 0 20px 50px rgba(179,20,52,.36); } }
+@keyframes focusLossPulse { from { box-shadow: 0 0 0 4px rgba(255,49,88,.12), 0 18px 44px rgba(179,20,52,.24); } to { box-shadow: 0 0 0 8px rgba(255,49,88,.24), 0 20px 50px rgba(179,20,52,.42); } }
 .student-card-body { padding: 15px; }
 .mission-line { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 12px; }
 .mission-line span { color: var(--primary-2); font-size: .69rem; font-weight: 900; text-transform: uppercase; letter-spacing: .07em; }

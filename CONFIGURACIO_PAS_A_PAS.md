@@ -90,9 +90,9 @@ Pots desactivar temporalment la IA canviant:
 var OPENAI_ACTIU = false;
 ```
 
-Els exercicis `NUMERICA` i `EXACTA` es corregeixen directament en Apps Script, sense cridar OpenAI. Els exercicis `PROCEDIMENT` reserven la IA per comprovar transformacions alternatives i no només el resultat final. La configuració inicial conserva com a màxim un exercici de procediment en cada bloc de cinc i nivell; la resta són de resposta ràpida. Si la IA està desactivada, falla o supera una quota, la resposta **no es perd ni bloqueja l'alumne**: queda com `REVISAR_DOCENT` en la cua de seguiment.
+Els exercicis `NUMERICA` i `EXACTA` es corregeixen directament. Els `PROCEDIMENT_LOCAL` exigeixen passos i validen el resultat, les igualtats numèriques i que el procediment no siga una repetició trivial, però sense cridar OpenAI. Els `PROCEDIMENT` reserven la IA per al cinqué exercici del bloc, quan cal interpretar transformacions alternatives. Si la IA està desactivada, falla o supera una quota, la resposta **no es perd ni bloqueja l'alumne**: queda com `REVISAR_DOCENT` en la cua de seguiment.
 
-En una pregunta `PROCEDIMENT`, si el resultat és correcte però falten passos, el primer enviament queda `EN_CURS` i obliga a repetir la mateixa activitat. Si l'alumne torna a ometre'ls, pot avançar amb un 50 %, però no rep energia, ratxa, insígnies ni aporta a l'objectiu cooperatiu. Només un procediment validat pot concedir la insígnia `PAS_A_PAS`.
+En una pregunta `PROCEDIMENT_LOCAL` o `PROCEDIMENT`, el navegador avisa abans d'enviar si només s'ha escrit el resultat. Si encara arriba una resposta sense passos —per exemple, per un enviament forçat en perdre el focus— el primer intent queda `EN_CURS`. Un procediment incomplet no rep energia, ratxa, insígnies ni aporta a l'objectiu cooperatiu. Només un procediment validat pot concedir `PAS_A_PAS`.
 
 Deixa `DEBUG_IA_ACTIU = false` durant les classes. Això evita una escriptura addicional en Sheets per cada correcció. Activa-ho només temporalment quan vulgues diagnosticar una resposta de l'API.
 
@@ -105,7 +105,7 @@ No tornes a executar `configurarProjecte()` ni esborres cap pestanya:
 3. Tria la funció `optimitzarCorreccionsProjecte` i executa-la **una sola vegada**.
 4. Quan aparega el missatge de finalització, crea una nova versió de la implementació web.
 
-La funció afegeix automàticament la configuració `CorreccionsIAPerNivell = 1` i només adapta les preguntes curriculars creades pel programa (`CURR_`). No toca preguntes manuals, respostes d'alumnes, pestanyes d'historial, columnes addicionals, anotacions ni càlculs. Tampoc cal crear cap columna nova.
+La funció usa la configuració `CorreccionsIAPerNivell = 1` i transforma les antigues preguntes ràpides curriculars en `PROCEDIMENT_LOCAL`. Només toca preguntes creades pel programa (`CURR_`): no modifica preguntes manuals, respostes d'alumnes, historial, columnes addicionals, anotacions ni càlculs. Després d'actualitzar el codi d'Apps Script, executa `optimitzarCorreccionsProjecte()` una vegada encara que ja l'hagueres executada amb una versió anterior. No cal crear cap columna nova.
 
 ## Part 4 — Desplegar Apps Script
 

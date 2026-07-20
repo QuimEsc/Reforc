@@ -12,7 +12,7 @@ window.GAMIFICACIO_CONFIG = Object.freeze({
   focusSessionMinutes: 55,
   liveHeartbeatMs: 60000,
   liveAnswerDebounceMs: 900,
-  liveTtlHours: 52,
+  liveTtlHours: 72,
   maxAnswerChars: 12000,
-  version: "1.0.0"
+  version: "1.0.1"
 });

@@ -3,6 +3,7 @@
 
   const config = window.GAMIFICACIO_CONFIG;
   const FOCUS_ALERT_MS = 60 * 1000;
+  const LIVE_TTL_MS = Math.max(1, Number(config.liveTtlHours || 72)) * 60 * 60 * 1000;
   const state = {
     items: [],
     catalog: { sectors: [], missions: [], questions: [], solutions: [], levelPlans: [], nextLockedMission: null },
@@ -16,6 +17,8 @@
     demoTimer: null,
     renderTimer: null,
     focusExpiryTimer: null,
+    focusAlerts: {},
+    focusStates: {},
     proposalTimer: null,
     started: false,
     eventsBound: false
@@ -66,6 +69,8 @@
     state.demoTimer = null;
     state.renderTimer = null;
     state.focusExpiryTimer = null;
+    state.focusAlerts = {};
+    state.focusStates = {};
     state.proposalTimer = null;
     state.started = false;
     if (window.GameBattleTeacher) window.GameBattleTeacher.stop();
@@ -153,6 +158,29 @@
     return incidentAt > 0 && Date.now() - incidentAt < FOCUS_ALERT_MS;
   }
 
+  function updateFocusAlerts(items) {
+    const now = Date.now();
+    const seen = {};
+    items.forEach((item) => {
+      const key = String(item.key || item.sessionId || item.studentId || "");
+      seen[key] = true;
+      const current = item.focusState === "HIDDEN" ? "HIDDEN" : "VISIBLE";
+      const previous = state.focusStates[key];
+      if (current === "HIDDEN" && previous !== "HIDDEN") {
+        const eventAt = previous === undefined ? Number(item.updatedAt || now) : now;
+        if (now - eventAt < FOCUS_ALERT_MS) state.focusAlerts[key] = eventAt;
+      }
+      state.focusStates[key] = current;
+      item.focusIncidentAt = Number(state.focusAlerts[key] || 0);
+    });
+    Object.keys(state.focusStates).forEach((key) => {
+      if (!seen[key]) {
+        delete state.focusStates[key];
+        delete state.focusAlerts[key];
+      }
+    });
+  }
+
   function scheduleFocusExpiry() {
     if (state.focusExpiryTimer) window.clearTimeout(state.focusExpiryTimer);
     state.focusExpiryTimer = null;
@@ -192,9 +220,10 @@
         focusState: index === 1 ? "HIDDEN" : "VISIBLE",
         submissionReason: index === 1 ? "focus_hidden" : "normal",
         focusIncidentAt: index === 1 ? now - 10000 : 0,
-        updatedAt: now - index * 47000
+        updatedAt: index === 1 ? now - 10000 : now - index * 47000
       };
     });
+    updateFocusAlerts(state.items);
     render();
   }
 
@@ -342,7 +371,12 @@
     state.liveRef = db.ref(window.GameLive.pathFor("live"));
     state.liveRef.on("value", (snapshot) => {
       const value = snapshot.val() || {};
-      state.items = Object.entries(value).map(([key, item]) => ({ key, ...item }));
+      const { items, removals } = normaliseLiveItems(value);
+      updateFocusAlerts(items);
+      state.items = items;
+      if (Object.keys(removals).length) {
+        state.liveRef.update(removals).catch((error) => console.warn("No s'han pogut netejar sessions antigues.", error));
+      }
       setConnection("online", "En directe");
       render();
     }, (error) => {
@@ -358,6 +392,53 @@
     });
   }
 
+  function normaliseLiveItems(value) {
+    const now = Date.now();
+    const winners = new Map();
+    const removals = {};
+    Object.entries(value).forEach(([key, rawItem]) => {
+      if (!rawItem || typeof rawItem !== "object") {
+        removals[key] = null;
+        return;
+      }
+      const item = { key, ...rawItem };
+      const activityAt = Math.max(Number(item.updatedAt || 0), Number(item.startedAt || 0));
+      if (!activityAt || now - activityAt > LIVE_TTL_MS) {
+        removals[key] = null;
+        return;
+      }
+      const studentKey = String(item.studentId || key).trim().toLocaleLowerCase("ca");
+      const current = winners.get(studentKey);
+      if (!current) {
+        winners.set(studentKey, item);
+        return;
+      }
+      const currentAt = Math.max(Number(current.updatedAt || 0), Number(current.startedAt || 0));
+      const itemIsStableKey = key === window.GameLive.safeKey(item.studentId);
+      const currentIsStableKey = current.key === window.GameLive.safeKey(current.studentId);
+      const itemWins = activityAt > currentAt || (activityAt === currentAt && itemIsStableKey && !currentIsStableKey);
+      if (itemWins) {
+        removals[current.key] = null;
+        winners.set(studentKey, item);
+      } else {
+        removals[key] = null;
+      }
+    });
+    return { items: [...winners.values()], removals };
+  }
+
+  function expireLiveItems() {
+    if (window.GameData.isDemo()) return;
+    const now = Date.now();
+    const expired = state.items.filter((item) => now - Math.max(Number(item.updatedAt || 0), Number(item.startedAt || 0)) > LIVE_TTL_MS);
+    if (!expired.length) return;
+    state.items = state.items.filter((item) => !expired.includes(item));
+    if (state.liveRef) {
+      const removals = Object.fromEntries(expired.map((item) => [item.key, null]));
+      state.liveRef.update(removals).catch((error) => console.warn("No s'han pogut caducar sessions antigues.", error));
+    }
+  }
+
   function filteredItems() {
     const search = dom.searchInput.value.trim().toLowerCase();
     const filter = dom.statusFilter.value;
@@ -365,7 +446,9 @@
       .filter((item) => !search || String(item.studentName || "").toLowerCase().includes(search))
       .filter((item) => filter === "ALL" || statusOf(item) === filter)
       .sort((a, b) => Number(hasFocusIncident(b)) - Number(hasFocusIncident(a))
-        || Number(b.updatedAt || 0) - Number(a.updatedAt || 0));
+        || (hasFocusIncident(a) ? Number(b.focusIncidentAt || 0) - Number(a.focusIncidentAt || 0) : 0)
+        || String(a.studentName || "").localeCompare(String(b.studentName || ""), "ca", { sensitivity: "base" })
+        || String(a.studentId || "").localeCompare(String(b.studentId || "")));
   }
 
   function renderGoal(percent) {
@@ -375,6 +458,7 @@
   }
 
   async function render() {
+    expireLiveItems();
     const items = filteredItems();
     scheduleFocusExpiry();
     const now = Date.now();
@@ -382,7 +466,7 @@
     dom.activeCount.textContent = activeItems.length;
     dom.workingCount.textContent = activeItems.filter((item) => statusOf(item) === "WORKING").length;
     dom.helpCount.textContent = activeItems.filter((item) => statusOf(item) === "NEEDS_TEACHER").length;
-    dom.focusCount.textContent = activeItems.filter((item) => item.submissionReason && item.submissionReason !== "normal").length;
+    dom.focusCount.textContent = activeItems.filter(hasFocusIncident).length;
     dom.lastUpdateText.textContent = state.items.length ? `Actualitzat ${elapsedText(Math.max(...state.items.map((item) => Number(item.updatedAt || 0))))}` : "Sense dades encara";
     dom.studentGrid.innerHTML = "";
     dom.emptyMonitor.classList.toggle("hidden", Boolean(items.length));
@@ -399,7 +483,7 @@
   function solutionHtmlFor(item) {
     const solution = state.solutionIndex[String(item.exerciseId || "")] || {};
     const model = String(solution.modelSolution || "").trim();
-    const expected = String(solution.expectedAnswer || "").trim();
+    const expected = String(solution.expectedAnswer || item.expectedAnswer || "").trim();
     const value = model || (expected ? `Resposta esperada: ${expected}` : "No hi ha una solució model preparada.");
     if (/<[a-z][\s\S]*>/i.test(value)) return window.GameMath.sanitiseHtml(value);
     return window.GameMath.sanitiseHtml(window.GameMath.studentTextToHtml(value));
@@ -417,7 +501,7 @@
     const flags = [
       `<span class="flag">Fase actual: ${window.GameMath.escapeHtml(item.route || "SUPORT")}</span>`,
       `<span class="flag">💡 ${Number(item.helpCount || 0)} ajudes</span>`,
-      item.focusState === "HIDDEN" || (item.submissionReason && item.submissionReason !== "normal") ? `<span class="flag focus">Canvi de focus: ${window.GameMath.escapeHtml(item.submissionReason || "detectat")}</span>` : ""
+      focusIncident ? `<span class="flag focus">Canvi de focus: ${window.GameMath.escapeHtml(item.submissionReason || "detectat")}</span>` : ""
     ].join("");
     card.innerHTML = `
       <header class="student-card-header">
@@ -429,7 +513,7 @@
         <div class="mission-line"><span>${window.GameMath.escapeHtml(item.missionTitle || item.missionId || "Missió")}</span><small>${window.GameMath.escapeHtml(item.exerciseId || "")}</small></div>
         <div class="monitor-question math-content">${window.GameMath.sanitiseHtml(item.questionHtml || "Sense pregunta")}</div>
         <div class="monitor-answer math-content ${answerHtml ? "" : "empty"}">${answerHtml ? window.GameMath.sanitiseHtml(answerHtml) : "Encara no ha escrit res."}</div>
-        <details class="monitor-solution">
+        <details class="monitor-solution" open>
           <summary>Solució model</summary>
           <div class="monitor-solution-content math-content">${solutionHtml}</div>
         </details>

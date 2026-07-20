@@ -37,6 +37,7 @@
     submittedExerciseId: "",
     autoAdvancePending: false,
     retryFeedback: "",
+    submissionId: "",
     lastFocusLossAt: 0,
     pendingFocusWarning: false,
     answerDebounce: null,
@@ -176,12 +177,25 @@
       prepareFocusSession(studentId);
       applyTheme(state.trimester);
       renderMissionScreen();
-      await window.GameLive.start({
+      const liveSession = await window.GameLive.start({
         sessionId: state.sessionId,
         studentId: state.student.studentId,
         studentName: state.student.name,
-        onComment: (comment) => toast(`Professor: ${comment.text}`, "warning", 9000)
+        onComment: (comment) => toast(`Professor: ${comment.text}`, "warning", 9000),
+        onReplaced: () => {
+          const replacedSessionId = state.sessionId;
+          toast("Este alumne acaba d'entrar des d'un altre dispositiu. Esta pantalla es tancarà.", "warning", 8000);
+          window.setTimeout(() => {
+            if (state.student && state.sessionId === replacedSessionId) logout();
+          }, 500);
+        }
       });
+      const previous = liveSession && liveSession.previous;
+      if (previous && state.currentExercise && previous.exerciseId === String(state.currentExercise.exerciseId || "") && previous.answer) {
+        state.currentExercise.savedAnswer = previous.answer;
+        state.currentExercise.savedAnswerPreviewHtml = previous.answerPreviewHtml || "";
+        state.helpCount = Math.max(state.helpCount, Number(previous.helpCount || 0));
+      }
       if (window.GameBattleStudent) window.GameBattleStudent.setStudent(state.student);
       resolveIp();
       showScreen("mission");
@@ -333,6 +347,26 @@
     return value ? window.GameMath.studentTextToHtml(value) : "";
   }
 
+  function createSubmissionId() {
+    const random = window.crypto && typeof window.crypto.randomUUID === "function"
+      ? window.crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return `${state.sessionId}-${state.currentExercise ? state.currentExercise.exerciseId : "exercise"}-${random}`;
+  }
+
+  function procedureParts(answer) {
+    return String(answer || "").split(/=|\r?\n/).map((part) => part.trim()).filter(Boolean);
+  }
+
+  function procedureIsSufficient(answer) {
+    if (!state.currentExercise || !state.currentExercise.requiresProcedure) return true;
+    const parts = procedureParts(answer);
+    const minimum = Math.max(2, Number(state.currentExercise.minimumSteps || 2));
+    if (parts.length < minimum) return false;
+    const unique = new Set(parts.map((part) => part.toLowerCase().replace(/\s+/g, "")));
+    return unique.size > 1;
+  }
+
   function focusAnswerEditor() {
     if (isGeometryExercise()) dom.geometryCanvas.focus({ preventScroll: true });
     else dom.answerInput.focus({ preventScroll: true });
@@ -347,6 +381,7 @@
 
   async function openExercise() {
     if (!state.currentExercise) return;
+    state.submissionId = createSubmissionId();
     dom.nextExerciseButton.innerHTML = 'Continuar <span>→</span>';
     state.helpCount = Number(state.currentExercise.helpCount || 0);
     state.submittedExerciseId = "";
@@ -428,6 +463,12 @@
       focusAnswerEditor();
       return;
     }
+    if (!forced && !procedureIsSufficient(answer)) {
+      const minimum = Math.max(2, Number(state.currentExercise.minimumSteps || 2));
+      toast(`Este exercici demana procediment: escriu almenys ${minimum} expressions o passos separats amb =. Posar només el resultat no dona energia.`, "warning", 8500);
+      focusAnswerEditor();
+      return;
+    }
 
     state.submitting = true;
     dom.submitButton.disabled = true;
@@ -444,7 +485,8 @@
         answer,
         helpCount: state.helpCount,
         reason,
-        ip: state.ip
+        ip: state.ip,
+        submissionId: state.submissionId
       });
       await syncLive(() => window.GameLive.markSubmitted(reason, answer, currentAnswerPreview()));
       state.submittedExerciseId = state.currentExercise.exerciseId;
@@ -688,7 +730,7 @@
     if (now - state.lastFocusLossAt < 1400) return;
     state.lastFocusLossAt = now;
     const focus = readFocusSession() || prepareFocusSession(state.student.studentId);
-    syncLive(() => window.GameLive.updateDynamic({ focusState: "HIDDEN", submissionReason: reason, focusIncident: true }));
+    syncLive(() => window.GameLive.updateDynamic({ focusState: "HIDDEN", submissionReason: reason }));
     if (!focus.warned) {
       focus.warned = true;
       sessionStorage.setItem(FOCUS_KEY, JSON.stringify(focus));
@@ -700,7 +742,7 @@
 
   function registerFocusReturn() {
     if (!state.student) return;
-    syncLive(() => window.GameLive.updateDynamic({ focusState: "VISIBLE" }));
+    syncLive(() => window.GameLive.updateDynamic({ focusState: "VISIBLE", submissionReason: "normal" }));
     if (state.pendingFocusWarning) {
       state.pendingFocusWarning = false;
       toast("Primer avís: si tornes a eixir d'esta pàgina durant la sessió, s'enviarà el que tingues escrit.", "warning", 8500);
@@ -717,6 +759,7 @@
     state.student = null;
     state.currentExercise = null;
     state.retryFeedback = "";
+    state.submissionId = "";
     state.sessionId = "";
     state.pendingAvatarChoice = false;
     sessionStorage.removeItem(STUDENT_KEY);

@@ -16,6 +16,7 @@ Aplicació web autònoma per a reforç de matemàtiques de 1r d'ESO. La carpeta 
 - Nombre de sectors ampliable des de Sheets: pots usar 3, 5 o 7 per trimestre; els sectors addicionals i les seues cinc missions es creen sense tocar el codi.
 - Històric en `Dades` i estat compacte en `Progres`.
 - Seguiment quasi en temps real amb Firebase i MathJax.
+- Una única targeta de seguiment per alumne: si entra des d'un altre ordinador, la connexió nova substitueix l'anterior, recupera l'últim esborrany del mateix exercici i la pantalla antiga deixa d'actualitzar. L'última resposta es conserva 72 hores i després el monitor la retira automàticament.
 - Pissarra docent d'explicacions a pantalla gran, accessible des de seguiment, amb conversió en directe de text pla a MathJax.
 - Accés al seguiment amb una contrasenya modificable en el Google Sheet, pestanya `Contrasenya`, cel·la `A2`.
 - Comentaris individuals i globals.
@@ -26,7 +27,7 @@ Aplicació web autònoma per a reforç de matemàtiques de 1r d'ESO. La carpeta 
 - Set insígnies il·lustrades per treball, procés, constància, ús d'ajudes i ampliació; sense rànquing. Les últimes es veuen al panell i la col·lecció completa al perfil.
 - Objectiu cooperatiu de classe alimentat per activitats individuals.
 - Pistes preparades i ajuda d'OpenAI amb MathJax.
-- Correcció híbrida: les respostes finals senzilles es validen directament en Apps Script i només els exercicis reservats per mostrar el procediment usen IA. Amb la configuració inicial, 950 dels 1.125 exercicis del banc són de correcció ràpida i un màxim de 175 (15,6 %) poden demanar validació d'OpenAI. Si la IA falla, la resposta es guarda i l'alumne continua.
+- Correcció híbrida: quatre exercicis de cada bloc de cinc exigeixen procediment però el validen localment i sense OpenAI; només el cinqué pot usar IA per interpretar procediments alternatius. Posar únicament el resultat no dona energia. Si la IA falla, la resposta es guarda per a revisió docent.
 - En els exercicis `PROCEDIMENT`, un resultat correcte sense passos provoca un primer reintent obligatori. Si torna a ometre'ls, avança amb un 50 %, però sense energia, ratxa, insígnia ni aportació a l'objectiu de classe. Les respostes incorrectes tampoc generen recompenses.
 - Editor geomètric tàctil sobre quadrícula per construir punts, segments, angles, polígons, simetries, girs, translacions i circumferències. El banc inclou 45 construccions autocorregibles i el seguiment mostra la figura completa en temps real.
 - Reptes d'ampliació generats per IA per a qui completa cinc exercicis correctes en menys del temps configurat. El professor els ha d'aprovar, editar o rebutjar; són individuals i, si es completen bé, concedeixen la insígnia «Cometa veloç».
@@ -89,7 +90,7 @@ En `Usuaris`, el backend afegeix automàticament al final la columna `CanvisAvat
 
 L'enllaç de seguiment només es mostra en la pantalla inicial. Desapareix quan l'alumne entra en les missions o en una activitat. El panell docent valida la contrasenya en Apps Script i manté la sessió oberta durant un màxim de sis hores.
 
-Les preguntes continuen acceptant HTML i MathJax. Firebase envia la pregunta completa només en entrar en un exercici; després actualitza únicament resposta, estat, ajudes i timestamp.
+Les preguntes continuen acceptant HTML i MathJax. Firebase envia la pregunta completa només en entrar en un exercici; després actualitza únicament resposta, estat, ajudes i timestamp. La clau de `live` és l'identificador estable de l'alumne, no el dispositiu ni la sessió; no cal afegir cap columna al Google Sheet ni cap regla nova per a este canvi.
 
 Firebase és un suport de seguiment, no el magatzem principal de respostes. Si temporalment falla o rebutja una escriptura, l'enviament a Apps Script i Google Sheets continua i l'alumne rep només un avís de seguiment no disponible.
 
@@ -97,7 +98,7 @@ Les construccions geomètriques no s'envien com una imatge pesada: la resposta d
 
 La pissarra i la vista matemàtica de l'alumne comparteixen el mateix conversor. Reconeix fraccions (`5/3`), potències, arrels, matrius (`mat(...)`), determinants (`det(...)`), sistemes (`sis(...)`), límits i integrals. L'esborrany de l'explicació queda guardat només en el navegador del professor.
 
-El seguiment docent carrega `SolucioModel` mitjançant el catàleg privat d'Apps Script i la mostra, renderitzada amb MathJax, dins d'un desplegable de cada targeta d'alumne. Esta informació no s'escriu en Firebase ni s'envia a la interfície de l'alumnat.
+El seguiment docent carrega `SolucioModel` mitjançant el catàleg privat d'Apps Script i la mostra oberta i renderitzada amb MathJax dins de cada targeta. Si no hi ha model, mostra almenys la resposta esperada publicada en la sessió. `SolucioModel` no s'escriu en Firebase ni s'envia a la interfície de l'alumnat.
 
 La pestanya `Sectors` guarda l'ambientació i la pestanya `Missions` conté `SectorId` i `Desbloquejada`. `PlansNivell` només guarda les excepcions que marques per alumne i missió; sense excepció, sempre es fan les tres fases en ordre. `RevisionsDocents` conté únicament procediments que la IA no ha pogut decidir amb seguretat. El mapa rep només les cinc missions del sector actual. Els reptes de la IA tenen `GeneradaIA=SI`: no compten dins de les activitats normals i només apareixen a l'alumne al qual els has aprovat.
 
@@ -105,4 +106,4 @@ La pestanya `Sectors` guarda l'ambientació i la pestanya `Missions` conté `Sec
 
 ## OpenAI
 
-El backend usa `gpt-4o-mini` amb la Responses API i una eixida JSON estructurada. Les fórmules de les ajudes s'exigeixen en LaTeX delimitat i el navegador les renderitza amb MathJax. La fila `CorreccionsIAPerNivell` de `Configuracio` val inicialment `1`: conserva com a exercici de procediment l'últim de cada bloc de cinc quan eixe contingut ho requereix. Els altres es corregeixen per resultat, sense xarxa ni cost d'OpenAI. Fitxa oficial del model: <https://developers.openai.com/api/docs/models/gpt-4o-mini>.
+El backend usa `gpt-4o-mini` amb la Responses API i una eixida JSON estructurada. Les fórmules de les ajudes s'exigeixen en LaTeX delimitat i el navegador les renderitza amb MathJax. La fila `CorreccionsIAPerNivell` de `Configuracio` val inicialment `1`: l'últim exercici de cada bloc de cinc pot usar IA; els quatre anteriors són `PROCEDIMENT_LOCAL`, exigeixen passos i es corregeixen sense xarxa ni cost d'OpenAI. Les peticions repetides després d'un timeout reutilitzen el resultat i no sumen intents ni insígnies. Fitxa oficial del model: <https://developers.openai.com/api/docs/models/gpt-4o-mini>.

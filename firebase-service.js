@@ -9,9 +9,15 @@
   let commentCallback = null;
   let globalCommentRef = null;
   let globalCommentCallback = null;
+  let ownershipRef = null;
+  let ownershipCallback = null;
   let heartbeatId = null;
   let lastAnswer = null;
   let lastGlobalCommentAt = 0;
+  let currentOwner = false;
+  let replacementNotified = false;
+  let recoveredDraft = null;
+  let hasLiveRecord = false;
 
   function safeKey(value) {
     return String(value || "sense-id").trim().replace(/[.#$\[\]/]/g, "_").slice(0, 100) || "sense-id";
@@ -32,11 +38,64 @@
   }
 
   async function start(studentContext) {
-    context = { ...studentContext, startedAt: Date.now() };
-    if (!init() || window.GameData.isDemo()) return false;
     stopListeners();
-    liveRef = db.ref(pathFor("live", context.sessionId));
+    context = { ...studentContext, startedAt: Date.now() };
+    currentOwner = false;
+    replacementNotified = false;
+    recoveredDraft = null;
+    hasLiveRecord = false;
+    if (!init() || window.GameData.isDemo()) return { active: false, previous: null };
+
+    // Una única targeta per alumne. sessionId continua dins de la targeta i
+    // identifica quin dispositiu és el propietari de la connexió actual.
+    liveRef = db.ref(pathFor("live", context.studentId));
     commentRef = db.ref(pathFor("comments", context.sessionId));
+
+    const previousSnapshot = await liveRef.once("value");
+    const previous = previousSnapshot.val();
+    hasLiveRecord = Boolean(previous);
+    const ttlMs = Math.max(1, Number(config.liveTtlHours || 72)) * 60 * 60 * 1000;
+    if (previous && Date.now() - Number(previous.updatedAt || previous.startedAt || 0) <= ttlMs) {
+      recoveredDraft = {
+        exerciseId: String(previous.exerciseId || ""),
+        answer: String(previous.answer || ""),
+        answerPreviewHtml: String(previous.answerPreviewHtml || ""),
+        helpCount: Number(previous.helpCount || 0)
+      };
+    }
+
+    if (previous) {
+      const claim = await liveRef.transaction((value) => {
+        if (!value) return;
+        const ownerStartedAt = Number(value.startedAt || 0);
+        if (ownerStartedAt > context.startedAt && value.sessionId !== context.sessionId) return;
+        return {
+          ...value,
+          sessionId: context.sessionId,
+          studentId: context.studentId,
+          studentName: context.studentName,
+          startedAt: context.startedAt,
+          updatedAt: window.firebase.database.ServerValue.TIMESTAMP
+        };
+      }, undefined, false);
+      currentOwner = Boolean(claim.committed && claim.snapshot.val() && claim.snapshot.val().sessionId === context.sessionId);
+    } else {
+      currentOwner = true;
+    }
+
+    ownershipRef = liveRef.child("sessionId");
+    ownershipCallback = (snapshot) => {
+      const ownerSessionId = String(snapshot.val() || "");
+      if (!ownerSessionId) return;
+      if (ownerSessionId === context.sessionId) {
+        currentOwner = true;
+        startHeartbeat();
+        return;
+      }
+      relinquishOwnership();
+    };
+    ownershipRef.on("value", ownershipCallback);
+
     commentCallback = (snapshot) => {
       const comment = snapshot.val();
       if (comment && comment.text && typeof context.onComment === "function") context.onComment(comment);
@@ -53,15 +112,32 @@
       }
     };
     globalCommentRef.on("value", globalCommentCallback);
+    if (currentOwner) startHeartbeat();
+    return { active: currentOwner, replaced: !currentOwner, previous: recoveredDraft };
+  }
+
+  function startHeartbeat() {
+    if (heartbeatId || !currentOwner || !hasLiveRecord) return;
     heartbeatId = window.setInterval(() => updateDynamic({ heartbeat: true }), config.liveHeartbeatMs);
-    return true;
+  }
+
+  function relinquishOwnership() {
+    currentOwner = false;
+    if (heartbeatId) window.clearInterval(heartbeatId);
+    heartbeatId = null;
+    if (!replacementNotified && context && typeof context.onReplaced === "function") {
+      replacementNotified = true;
+      context.onReplaced();
+    }
   }
 
   async function publishExercise(exercise, mission, extra = {}) {
-    if (!liveRef || !context) return;
+    if (!liveRef || !context || !currentOwner) return false;
     const now = window.firebase.database.ServerValue.TIMESTAMP;
-    lastAnswer = "";
-    await liveRef.set({
+    const canRecover = recoveredDraft && recoveredDraft.exerciseId === String(exercise.exerciseId || "");
+    const initialAnswer = String(exercise.savedAnswer || (canRecover ? recoveredDraft.answer : "")).slice(0, config.maxAnswerChars);
+    const initialPreview = String(exercise.savedAnswerPreviewHtml || (canRecover ? recoveredDraft.answerPreviewHtml : "")).slice(0, 20000);
+    const payload = {
       groupId: config.groupId,
       sessionId: context.sessionId,
       studentId: context.studentId,
@@ -74,24 +150,38 @@
       questionHtml: String(exercise.questionHtml || "").slice(0, 50000),
       expectedAnswer: String(exercise.expectedAnswer || "").slice(0, 5000),
       interactionType: String(exercise.interactionType || ""),
-      answer: "",
-      answerPreviewHtml: "",
-      helpCount: Number(extra.helpCount || 0),
+      answer: initialAnswer,
+      answerPreviewHtml: initialPreview || (initialAnswer ? window.GameMath.studentTextToHtml(initialAnswer).slice(0, 20000) : ""),
+      helpCount: Math.max(Number(extra.helpCount || 0), canRecover ? recoveredDraft.helpCount : 0),
       state: "WORKING",
       focusState: "VISIBLE",
       submissionReason: "normal",
-      focusIncidentAt: 0,
-      startedAt: now,
+      startedAt: context.startedAt,
       updatedAt: now
-    });
+    };
+    const result = await liveRef.transaction((value) => {
+      if (value && value.sessionId && value.sessionId !== context.sessionId
+        && Number(value.startedAt || 0) > context.startedAt) return;
+      return payload;
+    }, undefined, false);
+    currentOwner = Boolean(result.committed && result.snapshot.val() && result.snapshot.val().sessionId === context.sessionId);
+    if (!currentOwner) {
+      relinquishOwnership();
+      return false;
+    }
+    lastAnswer = initialAnswer;
+    recoveredDraft = null;
+    hasLiveRecord = true;
+    startHeartbeat();
+    return true;
   }
 
   async function updateDynamic(changes = {}) {
-    if (!liveRef) return;
+    if (!liveRef || !currentOwner) return false;
     const payload = { updatedAt: window.firebase.database.ServerValue.TIMESTAMP };
     if (Object.prototype.hasOwnProperty.call(changes, "answer")) {
       const answer = String(changes.answer || "").slice(0, config.maxAnswerChars);
-      if (answer === lastAnswer && !changes.force) return;
+      if (answer === lastAnswer && !changes.force) return true;
       lastAnswer = answer;
       payload.answer = answer;
       payload.answerPreviewHtml = Object.prototype.hasOwnProperty.call(changes, "answerPreviewHtml")
@@ -101,8 +191,8 @@
     ["helpCount", "state", "focusState", "submissionReason"].forEach((key) => {
       if (Object.prototype.hasOwnProperty.call(changes, key)) payload[key] = changes[key];
     });
-    if (changes.focusIncident) payload.focusIncidentAt = window.firebase.database.ServerValue.TIMESTAMP;
     await liveRef.update(payload);
+    return true;
   }
 
   async function markSubmitted(reason, answer, answerPreviewHtml) {
@@ -116,18 +206,34 @@
   }
 
   async function removeCurrent() {
-    if (liveRef) await liveRef.remove();
+    if (!liveRef || !context || !currentOwner) return;
+    // No s'elimina en eixir: l'última resposta queda visible fins a 72 h.
+    // La transacció evita que un ordinador antic toque la sessió nova.
+    await liveRef.transaction((value) => {
+      if (!value || value.sessionId !== context.sessionId) return;
+      return {
+        ...value,
+        focusState: "VISIBLE",
+        updatedAt: window.firebase.database.ServerValue.TIMESTAMP
+      };
+    }, undefined, false);
   }
 
   function stopListeners() {
     if (commentRef && commentCallback) commentRef.off("value", commentCallback);
     if (globalCommentRef && globalCommentCallback) globalCommentRef.off("value", globalCommentCallback);
+    if (ownershipRef && ownershipCallback) ownershipRef.off("value", ownershipCallback);
     if (heartbeatId) window.clearInterval(heartbeatId);
     commentRef = null;
     commentCallback = null;
     globalCommentRef = null;
     globalCommentCallback = null;
+    ownershipRef = null;
+    ownershipCallback = null;
     heartbeatId = null;
+    liveRef = null;
+    currentOwner = false;
+    hasLiveRecord = false;
   }
 
   function getDb() {

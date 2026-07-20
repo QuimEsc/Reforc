@@ -37,7 +37,8 @@
     }
 
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), action.includes("suggest") || action === "help" || action === "list_proposals" ? 60000 : 30000);
+    const longAction = action.includes("suggest") || action === "help" || action === "list_proposals" || action === "submit";
+    const timeout = window.setTimeout(() => controller.abort(), longAction ? 45000 : 30000);
     let response;
     try {
       response = await fetch(config.appsScriptUrl, {
@@ -48,7 +49,10 @@
         signal: controller.signal
       });
     } catch (error) {
-      if (error.name === "AbortError") throw new Error("La resposta tarda massa. Torna-ho a intentar.");
+      if (error.name === "AbortError") {
+        if (action === "submit") throw new Error("La correcció tarda massa, però pot continuar guardant-se. Torna a prémer Enviar: no comptarà com un intent nou.");
+        throw new Error("La resposta tarda massa. Torna-ho a intentar.");
+      }
       throw new Error("No s'ha pogut contactar amb Apps Script. Revisa la URL i el desplegament.");
     } finally {
       window.clearTimeout(timeout);
